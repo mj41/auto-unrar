@@ -1,0 +1,9 @@
+Install Perl ( http://strawberryperl.com/ ).
+
+Create directories 'extract', 'extracted' and 'extracted-arch' inside 'auto-unrar' directory.
+Put your archive tree to 'extract'.
+Run 'perl unrar.pl'.
+See content of 'extracted' and 'extracted-arch' and not extracted content inside 'extract'.
+
+Inside 'tests' you can see structure of what you can put to 'extract'.
+
