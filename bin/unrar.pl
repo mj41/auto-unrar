@@ -82,7 +82,7 @@ sub process_archive_file {
     my $file_path = $base_dir . $sub_dir . $file_name;
 
     my $dest_directory = $conf->{dest_directory} . $sub_dir . '\\';
-    mkpath( $dest_directory ) unless -d $dest_directory;
+    mkpath( $dest_directory, { mode => 0777, } ) unless -d $dest_directory;
 
     my ( $blockencrypted, $needpassword, $continue ) = RAR::UnrarMJ::extract_headers($file_path,undef,0);
 
@@ -184,7 +184,7 @@ sub process_archive_file {
 
         if ( $extracted_ok ) {
             my $done_dir = $conf->{extracted_ok_dir} . $sub_dir;
-            mkpath( $done_dir ) unless -d $done_dir;
+            mkpath( $done_dir, { mode => 0777, } ) unless -d $done_dir;
             foreach my $archive_fpath ( keys %archives ) {
                 unless ( move($archive_fpath,$done_dir.'\\') ) {
                     print "Can't move '$archive_fpath' to '$done_dir'.\n" if $ver >= 1;
@@ -216,7 +216,7 @@ sub do_for_file {
     return 1 unless $type eq 'norar';
 
     my $dest_directory = $conf->{dest_directory} . $sub_dir . '\\';
-    mkpath( $dest_directory ) unless -d $dest_directory;
+    mkpath( $dest_directory, { mode => 0777, } ) unless -d $dest_directory;
 
     my $new_file_path = $dest_directory . $file_name;
     if ( -e $new_file_path ) {
@@ -247,8 +247,8 @@ sub load_dir_content {
     my ( $dir_name ) = @_;
 
     if ( not opendir(DIR, $dir_name) ) {
-        print STDERR "Directory $dir_name not open for read.\n" ;
-        return 0;
+        print STDERR "Directory '$dir_name' not open for read.\n" ;
+        return undef;
     }
     my @all_items = readdir(DIR);
     close(DIR);
@@ -324,6 +324,7 @@ sub process_dirs {
     #print  "--- $dir_name " . scalar(@other_items) . "\n";
     if ( scalar(@other_items) == 0 ) {
         #print "trying rmdir: '$dir_name'\n";
+        #chmod( 0777, $dir_name );
         $! = undef;
         unless ( rmdir($dir_name) ) {
             print "rmdir '$dir_name' failed: $!\n";
