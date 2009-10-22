@@ -204,7 +204,7 @@ sub do_for_file {
 
     my $file_path = $base_dir . $sub_dir . $file_name;
 
-    if ( my ( $a_num ) = $file_name =~ /\.(?:rar|r(\d+))$/i ) {
+    if ( my ( $a_num ) = $file_name =~ / \. ( ?: rar | r(\d+) | (\d{3}) ) $ /ix ) {
         return 1 unless $type eq 'rar';
 
         if ( (not defined $a_num) || $a_num == 0 ) {
