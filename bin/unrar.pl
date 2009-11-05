@@ -1,6 +1,9 @@
-# not exists .part .rar has >0 filesize
-# move from dirs, rename
-# create crc database
+# ToDo
+# rmdir problem
+# check free space
+# compare fname and fname.1 content, remove .1 if same
+# refactore, better configuration, help, ...
+# merge changes to Archive::Rar
 
 use strict;
 use warnings;
@@ -28,6 +31,8 @@ print "Destination directory: '$dest_directory'.\n" if $ver >= 5;
 my $extracted_ok_dir = catdir( $RealBin, '..', 'extracted-arch' );
 $extracted_ok_dir = rel2abs( $extracted_ok_dir ) . '\\';
 print "Extracted done ok directory for archives: '$extracted_ok_dir'.\n" if $ver >= 5;
+
+my $remove_extracted = 0;
 
 my $dir_to_extract = catdir( $RealBin, '..', 'extract' ) . '\\';
 my $items = {
@@ -117,7 +122,7 @@ sub process_archive_file {
                 print "  ... done ok. Valid password is '$password'.\n" if $ver >= 1;
             } else {
                 print "  ... failed. Valid password not found.\n" if $ver >= 1;
-                return 1;
+                return 0;
             }
 
         } else {
@@ -129,6 +134,7 @@ sub process_archive_file {
                 print "... done ok.\n" if $ver >= 1;
             } else {
                 print "... failed, error '$arch_info[0]'.\n" if $ver >= 1;
+                return 0;
             }
         }
 
@@ -183,11 +189,22 @@ sub process_archive_file {
         print "\n" if $ver >= 1;
 
         if ( $extracted_ok ) {
-            my $done_dir = $conf->{extracted_ok_dir} . $sub_dir;
-            mkpath( $done_dir, { mode => 0777, } ) unless -d $done_dir;
-            foreach my $archive_fpath ( keys %archives ) {
-                unless ( move($archive_fpath,$done_dir.'\\') ) {
-                    print "Can't move '$archive_fpath' to '$done_dir'.\n" if $ver >= 1;
+            # remove
+            if ( $conf->{remove_extracted} ) {
+                foreach my $archive_fpath ( keys %archives ) {
+                    unless ( unlink($archive_fpath) ) {
+                        print "Can't remove '$archive_fpath'.\n" if $ver >= 1;
+                    }
+                }
+
+            # move to extracted_ok_dir
+            } else {
+                my $done_dir = $conf->{extracted_ok_dir} . $sub_dir;
+                mkpath( $done_dir, { mode => 0777, } ) unless -d $done_dir;
+                foreach my $archive_fpath ( keys %archives ) {
+                    unless ( move($archive_fpath,$done_dir.'\\') ) {
+                        print "Can't move '$archive_fpath' to '$done_dir'.\n" if $ver >= 1;
+                    }
                 }
             }
         }
@@ -342,12 +359,13 @@ foreach my $item ( keys %$items ) {
 
     $item_conf->{dest_directory} = $dest_directory;
     $item_conf->{extracted_ok_dir} = $extracted_ok_dir;
+    $item_conf->{remove_extracted} = $remove_extracted;
     if ( -d $item ) {
         process_dirs( $item_conf, $item, '', '' );
 
     } elsif ( -f $item ) {
         my ( $volume, $directory, $file_name ) = File::Spec->splitpath( $item );
-        do_for_file( $item_conf, $item, '', $file_name, 1 );
+        do_for_file( 'rar', $item_conf, $directory, '', $file_name, 1 );
 
     } else {
         print "No file or directory '$item'.\n" if $ver >= 1;
