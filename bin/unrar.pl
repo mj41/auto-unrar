@@ -23,6 +23,9 @@ use YAML::Any qw/LoadFile/;
 my $ver = $ARGV[0];
 $ver = 2 unless defined $ver;
 
+my $remove_extracted = $ARGV[1];
+$remove_extracted = 1 unless defined $remove_extracted;
+
 
 my $dest_directory = catdir( $RealBin, '..', 'extracted' );
 $dest_directory = rel2abs( $dest_directory ) . '\\';
@@ -31,8 +34,6 @@ print "Destination directory: '$dest_directory'.\n" if $ver >= 5;
 my $extracted_ok_dir = catdir( $RealBin, '..', 'extracted-arch' );
 $extracted_ok_dir = rel2abs( $extracted_ok_dir ) . '\\';
 print "Extracted done ok directory for archives: '$extracted_ok_dir'.\n" if $ver >= 5;
-
-my $remove_extracted = 0;
 
 my $dir_to_extract = catdir( $RealBin, '..', 'extract' ) . '\\';
 my $items = {
@@ -263,12 +264,13 @@ sub do_for_dir {
 sub load_dir_content {
     my ( $dir_name ) = @_;
 
-    if ( not opendir(DIR, $dir_name) ) {
+    my $dir_h;
+    if ( not opendir($dir_h, $dir_name) ) {
         print STDERR "Directory '$dir_name' not open for read.\n" ;
         return undef;
     }
-    my @all_items = readdir(DIR);
-    close(DIR);
+    my @all_items = readdir($dir_h);
+    close($dir_h);
 
     my @items = ();
     foreach my $name ( @all_items ) {
@@ -338,13 +340,10 @@ sub process_dirs {
 
     # remove empty dirs
     my @other_items = load_dir_content( $dir_name );
-    #print  "--- $dir_name " . scalar(@other_items) . "\n";
     if ( scalar(@other_items) == 0 ) {
-        #print "trying rmdir: '$dir_name'\n";
-        #chmod( 0777, $dir_name );
         $! = undef;
         unless ( rmdir($dir_name) ) {
-            print "rmdir '$dir_name' failed: $!\n";
+            print "rmdir '$dir_name' failed: $! $^E\n";
         }
     }
 
