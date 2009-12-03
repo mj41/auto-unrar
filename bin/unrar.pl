@@ -338,6 +338,8 @@ sub process_dirs {
     }
 
 
+    return 1 unless $sub_dir;
+
     # remove empty dirs
     my @other_items = load_dir_content( $dir_name );
     if ( scalar(@other_items) == 0 ) {
