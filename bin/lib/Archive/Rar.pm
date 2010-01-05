@@ -330,14 +330,22 @@ sub Extract {
 #
 sub _AddToList {
     my ( $self, $pcurrfile, $pattrib ) = @_;
+
     return if ( $#$pattrib < 12 );         #fixed #33459
     return if ( $pattrib->[6] =~ /d/i );
+
     $self->{list} = () if ( !defined $self->{list} );
-    if ( $pattrib->[3] =~ /(^<->$)|(^<--$)/ ) {
+
+    if ( 
+        ( $pattrib->[3] =~ /(^<->$)|(^<--$)/ )
+        && ( exists $pcurrfile->{name} )
+        && ( $pcurrfile->{name} eq $pattrib->[0] )
+       ) 
+    {
         $pcurrfile->{packed} += $pattrib->[2];
         $pcurrfile->{parts}++;
-    }
-    else {
+
+    } else {
         %$pcurrfile           = ();
         $pcurrfile->{name}    = $pattrib->[0];
         $pcurrfile->{size}    = $pattrib->[1];
@@ -372,13 +380,14 @@ sub _AddToList {
 #
 #
 sub List {
-    my ( $retour, %currfile, @attrib );
-    my $self         = shift;
+    my $self = shift;
+
     $self->{list}    = undef;
     $self->{command} = '"vt"';
     $self->SetOptions( $self->{command}, @_ );
 
     my $args = $self->{current};
+    my $retour = undef;
     $args->{'-getoutput'} = 1 if not defined $args->{'-getoutput'};
     if ( !IsEmpty( $args->{'-initial'} ) ) {
         return $self->SetError( 256, $args->{'-initial'} ) if ( !chdir( $args->{'-initial'} ) );
@@ -389,27 +398,52 @@ sub List {
       "$self->{rar} $self->{command} $self->{options} $self->{archive} "
       . join( ' ', @{ $args->{'-files'} } )
     );
+
+    my ( %currfile, @attrib );
+
+    $self->{info} = {};
+
     my $in = 0;
-    my $first;
-    foreach ( @{ $self->{output} } ) {
-        s/[\s\n\r]+$//;
-        next if ( $_ eq '' );
-        if (/^-----/) { $first = 0; $in = !$in; next; }
-        next if ( !$in );
-        if (/^ [^\s]/) {
-            s/(^\s+)|(\s+$)//;
+    my $part_num = 1;
+    my $part_line_num = 0;
+    foreach my $line ( @{ $self->{output} } ) {
+        $part_line_num++;
+        
+        $line =~ s{[\s\n\r]+$}{};
+        next if $line eq '';
+        
+        if ( $line =~ /^-----/ ) {
+            $part_num++;
+            $part_line_num = 0;
+            $in = !$in;
+            next;
+        }
+        
+        if ( ! $in ) {
+            if ( $part_num == 3 && $part_line_num == 1 ) {
+                my ( $volume ) = $line  =~ /(\d+)$/;
+                $self->{info}->{volume} = $volume;
+            }
+            next;
+        }
+        
+        if ( $line =~ /^ [^\s]/ ) {
+            $line =~ s/^\s+//;
+            $line =~ s/\s+$//;
             $self->_AddToList( \%currfile, \@attrib );
             @attrib = ();
-            push @attrib, $_;
-        }
-        else {
-            push @attrib, split;
+            push @attrib, $line;
+
+        } else {
+            push @attrib, split( /\s+/, $line);
         }
     }
     $self->_AddToList( \%currfile, \@attrib );
+
     if ( $res == 0 and !IsEmpty($retour) ) {
         return $self->SetError( 257, $retour ) if ( !chdir($retour) );
     }
+
     return $res;
 }
 
