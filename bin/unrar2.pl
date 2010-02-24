@@ -6,6 +6,7 @@
 # * compare fname and fname.1 content, remove .1 if same
 # refactore, better configuration, help, ...
 # merge changes to Archive::Rar
+# password protected archives support
 
 use strict;
 use warnings;

@@ -1,9 +1,8 @@
 # ToDo
-# rmdir problem
 # check free space
 # compare fname and fname.1 content, remove .1 if same
 # refactore, better configuration, help, ...
-# merge changes to Archive::Rar
+# merge changes to Archive::Unrar
 
 use strict;
 use warnings;
