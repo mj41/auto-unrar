@@ -1,36 +1,49 @@
 # ToDo
+# mtime pro adresare
 # min_dir_mtime
 # check free space
 # duplicate names
-# unrar to temp directory
+# unrar to temp directory - go back if error
 # * compare fname and fname.1 content, remove .1 if same
 # refactore, better configuration, help, ...
 # merge changes to Archive::Rar
 # password protected archives support
+# backup old version of done_list files, remove backup after normal end
+# add run_type as dynamic conf name
+# after failed - save info about files - try if changed
+# full paths of files in archive
+# refactor to Perl package
 
 use strict;
 use warnings;
 
 use Carp qw(carp croak verbose);
 use FindBin qw($RealBin);
+
 use File::Spec::Functions qw/:ALL splitpath/;
-use File::Path;
 use File::Copy;
+use File::stat;
 
 use Storable;
-use Archive::Rar;
 use Data::Dumper;
 
 
 use lib 'lib';
 use App::KeyPress;
+use Archive::Rar;
 
 
 my $run_type = $ARGV[0];
-$run_type = 'test' unless $run_type;
+if ( ! $run_type || $run_type !~  /^(test|final)$/i ) {
+    print "Usage:\n";
+    print "  perl unrar2.pl test\n";
+    print "  perl unrar2.pl final\n";
+}
 
 my $ver = $ARGV[1];
 $ver = 2 unless defined $ver;
+
+print "Run type: $run_type\n" if $ver >= 2;
 
 
 my $keypress_obj = App::KeyPress->new(
@@ -50,6 +63,7 @@ sub my_croak {
 my $dirs_conf = [
 ];
 
+
 # devel
 if ( $run_type ne 'final' ) {
     $dirs_conf = [
@@ -63,7 +77,7 @@ if ( $run_type ne 'final' ) {
             recursive => 1,
             remove_done => 1,
             move_non_rars => 1,
-            min_dir_mtime => 3*60*60,
+            min_dir_mtime => 1*60*60, # seconds
         },
     ];
 }
@@ -213,21 +227,79 @@ sub save_item_done {
 }
 
 
+sub mkdir_copy_mtime {
+    my ( $dest_dir_path, $src_dir_path ) = @_;
+    
+    return 1 if -d $dest_dir_path;
+    
+    print "mkdir_copy_mtime '$src_dir_path' -> '$dest_dir_path'\n" if $ver >= 8;
+    
+    unless ( mkdir( $dest_dir_path, 0777 ) ) {
+        print "Command mkdir '$dest_dir_path' failed: $^E\n" if $ver >= 1;
+        return 0;
+    }
+
+    my $stat_obj = stat( $src_dir_path );
+    unless ( defined $stat_obj ) {
+        print "Command stat on '$src_dir_path' failed.\n" if $ver >= 1;
+        return 0;
+    }
+    
+    my $src_mtime = $stat_obj->mtime;
+    unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
+        print "Command utime '$dest_dir_path' failed: $^E\n" if $ver >= 1;
+        return 0;
+    }
+    print "mkdir_copy_mtime '$dest_dir_path' mtime set to " . (localtime $src_mtime) . "\n" if $ver >= 8;
+    return 1;
+}
+
+
+sub mkpath_copy_mtime {
+    my ( $dest_base_dir, $src_base_dir, $sub_dirs ) = @_;
+    
+    my $full_dest_dir = catdir( $dest_base_dir, $sub_dirs );
+    return 1 if -d $full_dest_dir;
+
+    unless ( -d $dest_base_dir ) {
+        print "Error mkpath_copy_mtime dest_base_dir '$dest_base_dir' doesn't exists.\n" if $ver >= 1;
+        return 0;
+    }
+
+    unless ( -d $src_base_dir ) {
+        print "Error mkpath_copy_mtime src_base_dir '$src_base_dir' doesn't exists.\n" if $ver >= 1;
+        return 0;
+    }
+
+    my $full_src_dir = catdir( $src_base_dir, $sub_dirs );
+    unless ( -d $full_src_dir ) {
+        print "Error mkpath_copy_mtime full_src_dir '$full_src_dir' doesn't exists.\n" if $ver >= 1;
+        return 0;
+    }
+
+    my @dir_parts = File::Spec->splitdir( $sub_dirs );
+    my $tmp_dest_dir = $dest_base_dir;
+    my $tmp_src_dir = $src_base_dir;
+    foreach my $dir ( @dir_parts ) {
+        $tmp_dest_dir = catdir( $tmp_dest_dir, $dir );
+        $tmp_src_dir = catdir( $tmp_src_dir, $dir );
+        return 0 unless mkdir_copy_mtime( $tmp_dest_dir, $tmp_src_dir );
+    }
+    
+    return 1;
+}
+
+
 sub do_for_dir {
-    my ( $dconf, $base_dir, $sub_dir, $dir_name ) = @_;
-
-    my $dir_path = catfile( $base_dir, $sub_dir, $dir_name );
-    return 0 unless -d $dir_path;
-
-    my $dest_dir_path = catdir( $dconf->{dest_dir}, $sub_dir, $dir_name );
-    mkdir( $dest_dir_path, 0777 ) unless -d $dest_dir_path;
-
+    my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $dir_name ) = @_;
+    my $full_subdir = catdir( $sub_dir, $dir_name );
+    push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $full_subdir ];
     return 1;
 }
 
 
 sub do_for_rar_file {
-    my ( $dconf, $base_dir, $sub_dir, $file_name, $dir_items ) = @_;
+    my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $file_name, $dir_items ) = @_;
 
 
     my $base_name_part = undef;
@@ -251,27 +323,26 @@ sub do_for_rar_file {
 
     return ( 0, "File isn't rar archive", undef, undef ) unless $is_rar_archive;
 
-    my $multipart_error_msg = "File is part of multiparts archive, but isn't first part.";
-    return ( 1, $multipart_error_msg, undef, undef ) if $multipart_type && ($part_num != 1);
+    return ( 1, "File is part of multiparts archive, but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
 
-
-    my $file_path = catfile( $base_dir, $sub_dir, $file_name );
+    return -1 unless mkpath_copy_mtime( $dconf->{dest_dir}, $base_dir, $sub_dir );
 
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
-    mkpath( $dest_dir, { mode => 0777, verbose => ($ver >= 3), } ) unless -d $dest_dir;
-
+    my $file_path = catfile( $base_dir, $sub_dir, $file_name );
+    
     my $rar_obj = Archive::Rar->new(
         '-archive' => $file_path,
-        '-initial' => $dest_dir
+        '-initial' => $dest_dir,
+        '-verbose' => $ver - 10
     );
     $rar_obj->List();
     my @files_extracted = $rar_obj->GetBareList();
 
-    if ( $ver >= 6 ) {
+    if ( $ver >= 10 ) {
         print "Input file '$file_name':\n";
         $rar_obj->PrintList();
         dumper( 'rar_obj->list', $rar_obj->{list} );
-        dumper( 'list', \@files_extracted );
+        dumper( '@files_extracted', \@files_extracted );
     }
 
     my @rar_parts_list = ( $file_name );
@@ -317,7 +388,7 @@ sub do_for_rar_file {
 
                 $files_extracted{$next_file} = 1;
                 push @files_extracted, $next_file;
-                print "Addding new extracted file '$next_file' to list from rar part num $other_part_num.\n" if $ver >= 5;
+                print "Addding new extracted file '$next_file' to list from rar part num $other_part_num.\n" if $ver >= 8;
             }
         }
 
@@ -332,59 +403,177 @@ sub do_for_rar_file {
         '-quiet' => 1,
         '-lowprio' => 1
     );
-    if ( $res ) {
+    if ( $res && $res != 1 ) {
         print "Error $res in extracting from '$file_path'.\n" if $ver >= 1;
-        return ( 1, $res, [], \@rar_parts_list );
+        return ( -1, $res, [], \@rar_parts_list );
     }
-    return ( 1, undef, \@files_extracted, \@rar_parts_list );
+    return ( 3, undef, \@files_extracted, \@rar_parts_list );
 }
 
 
 sub do_for_norar_file {
-    my ( $dconf, $base_dir, $sub_dir, $file_name ) = @_;
+    my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $file_name ) = @_;
 
     return 1 if not $dconf->{move_non_rars} && not $dconf->{cp_non_rars};
 
+    push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $sub_dir ];
 
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
-
-    my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
-    mkpath( $dest_dir, { mode => 0777, verbose => ($ver >= 3), } ) unless -d $dest_dir;
-
-    my $new_file_path = catfile( $dest_dir, $file_name );
-    if ( -e $new_file_path ) {
-        my $num = 2;
-        my $new_file_path_num;
-        do {
-            $new_file_path_num = $new_file_path . '.' . $num;
-            $num++;
-        } while ( -e $new_file_path_num );
-        $new_file_path = $new_file_path_num;
-    }
+    my $new_file_path = catfile( $dconf->{dest_dir}, $base_dir, $file_name );
 
     if ( $dconf->{move_non_rars} ) {
         print "Moving '$file_path' to '$new_file_path'.\n" if $ver >= 3;
-        $! = undef;
-        unless ( move($file_path,$new_file_path) ) {
-           print "Command mv '$file_path' '$new_file_path' failed: $! $^E\n" if $ver >= 1;
-           return 0;
-        }
+        push @$finish_cmds, [ 'move_num', $file_path, $new_file_path ];
+
 
     } elsif ( $dconf->{cp_non_rars} ) {
         print "Copying '$file_path' to '$new_file_path'.\n" if $ver >= 3;
-        $! = undef;
-        unless ( cp($file_path,$new_file_path) ) {
-           print "Command cp '$file_path' '$new_file_path' failed: $! $^E\n" if $ver >= 1;
-           return 0;
-        }
+        push @$finish_cmds, [ 'cp_num', $file_path, $new_file_path ];
+
     }
 
     return 1;
 }
 
 
+sub get_next_file_path {
+    my ( $file_path ) = @_;
+
+    my $num = 2;
+    my $new_file_path;
+    do {
+        $new_file_path = $new_file_path . '.' . $num;
+        $num++;
+    } while ( -e $new_file_path );
+    return $file_path;
+}
+
+
+sub rm_empty_dir {
+    my ( $dir_path ) = @_;
+
+    my @other_items = load_dir_content( $dir_path );
+    if ( scalar(@other_items) == 0 ) {
+        unless ( rmdir($dir_path) ) {
+            print "Command rmdir '$dir_path' failed: $^E\n" if $ver >= 1;
+            return 0;
+        }
+        print "Command rmdir '$dir_path' done ok.\n" if $ver >= 8;
+    }
+
+    return 1;
+}
+
+
+sub rm_rec_empty_dir {
+    my ( $dir_path ) = @_;
+
+    my @dir_items = load_dir_content( $dir_path );
+
+    if ( scalar @dir_items ) {
+        foreach my $name ( @dir_items ) {
+            my $path = catfile( $dir_path, $name );
+            unless ( -d $path ) {
+                print "Can't remove dir with items '$dir_path' (item '$name').\n" if $ver >= 1;
+                return 0;
+            }
+        }
+
+        # Only dirs remains.
+        foreach my $name ( @dir_items ) {
+            my $path = catfile( $dir_path, $name );
+            return 0 unless rm_rec_empty_dir( $path );
+        }
+    }
+    
+    return rm_empty_dir( $dir_path );
+}
+
+
+sub do_cmds {
+    my ( $done_list, $dconf, $finish_cmds ) = @_;
+
+    my $all_ok = 1;
+    foreach my $cmd_conf ( @$finish_cmds ) {
+        my $cmd = shift @$cmd_conf;
+        
+        # unlink
+        if ( $cmd eq 'unlink' ) {
+            my $full_part_path = shift @$cmd_conf;
+            unless ( unlink($full_part_path) ) {
+                print "Command unlink '$full_part_path' failed: $^E\n" if $ver >= 1;
+                $all_ok = 0;
+            }
+        
+        # save_done
+        } elsif ( $cmd eq 'save_done' ) {
+            my $item_name = shift @$cmd_conf;
+            unless ( save_item_done($done_list, $dconf, $item_name) ) {
+                $all_ok = 0;
+            }
+
+        # rmdir
+        } elsif ( $cmd eq 'rmdir' ) {
+            my $dir_name = shift @$cmd_conf;
+            
+            unless ( rmdir($dir_name) ) {
+                print "Command rmdir '$dir_name' failed: $! $^E\n" if $ver >= 1;
+                $all_ok = 0;
+            }
+
+        # move_num
+        } elsif ( $cmd eq 'move_num' ) {
+            my $file_path = shift @$cmd_conf;
+            my $new_file_path = shift @$cmd_conf;
+
+            $new_file_path = get_next_file_path( $new_file_path) if -e $new_file_path;
+            unless ( move($file_path, $new_file_path) ) {
+               print "Command move '$file_path' '$new_file_path' failed: $^E\n" if $ver >= 1;
+               $all_ok = 0;
+            }
+
+        # cp_num
+        } elsif ( $cmd eq 'cp_num' ) {
+            my $file_path = shift @$cmd_conf;
+            my $new_file_path = shift @$cmd_conf;
+
+            $new_file_path = get_next_file_path( $new_file_path) if -e $new_file_path;
+            unless ( cp($file_path, $new_file_path) ) {
+               print "Command cp '$file_path' '$new_file_path' failed: $^E\n" if $ver >= 1;
+               $all_ok = 0;
+            }
+
+        # mkpath_copy_mtime
+        } elsif ( $cmd eq 'mkpath_copy_mtime' ) {
+            my $dest_dir = shift @$cmd_conf;
+            my $src_dir = shift @$cmd_conf;
+            my $sub_dirs = shift @$cmd_conf;
+
+            unless ( mkpath_copy_mtime( $dest_dir, $src_dir, $sub_dirs ) ) {
+               $all_ok = 0;
+            }
+
+        # rm_empty_dir
+        } elsif ( $cmd eq 'rm_empty_dir' ) {
+            my $dir_path = shift @$cmd_conf;
+            $all_ok = 0 unless rm_empty_dir( $dir_path );
+
+        # rm_rec_empty_dir
+        } elsif ( $cmd eq 'rm_rec_empty_dir' ) {
+            my $dir_path = shift @$cmd_conf;
+            $all_ok = 0 unless rm_rec_empty_dir( $dir_path );
+
+        }
+    
+    } # foreach
+
+    return $all_ok;
+}
+
+
+
 sub unrar_dir {
-    my ( $done_list, $dconf, $sub_dir, $deep ) = @_;
+    my ( $done_list, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
 
     my $base_dir = $dconf->{'src_dir'};
 
@@ -406,17 +595,50 @@ sub unrar_dir {
 
         # directories
         next unless -d $path;
-        #print "$space$name\n" if $ver >= 3;
 
-        do_for_dir( $dconf, $base_dir, $sub_dir, $name );
+        do_for_dir( $dconf, $finish_cmds, $base_dir, $sub_dir, $name );
+
         if ( $dconf->{recursive} ) {
-            if ( not unrar_dir( $done_list, $dconf, $new_sub_dir, $deep+1) ) {
-                return 0;
-            }
-        }
-        save_item_done( $done_list, $dconf, $new_sub_dir ) if $deep < $dconf->{done_list_deep};
-   }
+            
+            # Going deeper and deeper inside directory structure.
+            if ( unrar_dir( $done_list, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
+                print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
+                if ( $deep < $dconf->{done_list_deep} ) {
+                    # Finish command.
+                    if ( scalar @$finish_cmds ) {
+                        dumper( "Finishing prev sub_dir '$sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
+                        do_cmds( $done_list, $dconf, $finish_cmds );
+                    }
 
+                    # Empty stacks.
+                    $undo_cmds = [];
+                    $finish_cmds = [];
+                }
+                next;
+
+            }
+
+            # Unrar failed.
+            print "Dir '$new_sub_dir' unrar failed.\n" if $ver >= 5;
+            if ( $deep < $dconf->{done_list_deep} ) {
+                # Undo command.
+                my $dest_path = catdir( $dconf->{dest_dir}, $new_sub_dir );
+                push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
+                dumper( "Undo prev sub_dir '$sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
+                do_cmds( $done_list, $dconf, $undo_cmds );
+                
+                # Empty stacks.
+                $undo_cmds = [];
+                $finish_cmds = [];
+                next;
+            }
+
+            return 0;
+        }
+        push @$finish_cmds, [ 'save_done', $new_sub_dir ] if $deep < $dconf->{done_list_deep};
+    }
+
+    my $extrace_error_found = 0;
     my $files_done = {};
     # find first parts or rars
     foreach my $name ( sort @items ) {
@@ -433,12 +655,18 @@ sub unrar_dir {
                 next;
             }
 
-            my ( $is_rar, $extract_err, $files_extracted, $rar_parts_list ) = do_for_rar_file(
-                $dconf, $base_dir, $sub_dir, $name, \@items
+            my ( $rar_rc, $extract_err, $files_extracted, $rar_parts_list ) = do_for_rar_file(
+                $dconf, $finish_cmds, $base_dir, $sub_dir, $name, \@items
             );
 
-            #print "$sub_dir, $name -- $is_rar, $extract_err\n";
-            if ( $is_rar ) {
+            print "$sub_dir, $name -- rar_rc $rar_rc, $extract_err\n" if $ver >= 8;
+            if ( $ver >= 9 ) {
+                dumper( "files_extracted", $files_extracted );
+                dumper( "rar_parts_list", $rar_parts_list );
+            }
+            if ( $rar_rc != 0 ) {
+                # No first part of multipart archive.
+                next if $rar_rc == 1;
 
                 # If error -> do not process these archives as normal files
                 # in next code.
@@ -447,18 +675,27 @@ sub unrar_dir {
                     $files_done->{ $part_sub_path } = 1;
                 }
 
-                if ( not $extract_err ) {
+                # Add all extracted files to undo list.
+                foreach my $ext ( @$files_extracted ) {
+                    print "Extracted archive '$ext' processed.\n" if $ver >= 5;
+                    my $ext_path = catfile( $dconf->{dest_dir}, $sub_dir, $ext );
+                    next unless -e $ext_path;
+                    push @$undo_cmds, [ 'unlink', $ext_path ];
+                }
+
+                if ( $extract_err ) {
+                    print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
+                    return 0;
+
+                } else {
                     # remove rar archives from list
                     foreach my $part ( @$rar_parts_list ) {
                         print "Archive part '$part' processed.\n" if $ver >= 5;
                         my $part_path = catfile( $sub_dir, $part );
-                        save_item_done( $done_list, $dconf, $part_path ) if $deep < $dconf->{done_list_deep};
+                        push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{done_list_deep};
                         if ( $dconf->{remove_done} ) {
-                            my $part_path = catdir( $dir_name, $part );
-                            $! = undef;
-                            unless ( unlink($part_path) ) {
-                                print "Command unlink '$part_path' failed: $! $^E\n" if $ver >= 1;
-                            }
+                            my $full_part_path = catdir( $dir_name, $part );
+                            push @$finish_cmds, [ 'unlink', $full_part_path ];
                         }
                     }
                 }
@@ -477,26 +714,51 @@ sub unrar_dir {
         # all files
         if ( -f $path ) {
             #print "$space$name ($path) " if $ver >= 3;
-            do_for_norar_file( $dconf, $base_dir, $sub_dir, $name );
-            save_item_done( $done_list, $dconf, $file_sub_path ) if $deep < $dconf->{done_list_deep};
+            do_for_norar_file( $dconf, $finish_cmds, $base_dir, $sub_dir, $name );
+            push @$finish_cmds, [ 'save_done', $file_sub_path ] if $deep < $dconf->{done_list_deep};
         }
     }
 
-    return 1 unless $sub_dir;
+    if ( $sub_dir ) {
+        # remove empty dirs
+        if ( $dconf->{remove_done} ) {
+            push @$finish_cmds, [ 'rm_empty_dir', $dir_name ];
+        }
+    }
 
-
-    # remove empty dirs
-    if ( $dconf->{remove_done} ) {
-        my @other_items = load_dir_content( $dir_name );
-        if ( scalar(@other_items) == 0 ) {
-            $! = undef;
-            unless ( rmdir($dir_name) ) {
-                print "Command rmdir '$dir_name' failed: $! $^E\n" if $ver >= 1;
-            }
+    if ( $deep < $dconf->{done_list_deep} ) {
+        # Finish prev.
+        if ( scalar @$finish_cmds ) {
+            dumper( "finishing prev sub_dir '$sub_dir'", $finish_cmds ) if $ver >= 5;
+            do_cmds( $done_list, $dconf, $finish_cmds );
+            $finish_cmds = [];
         }
     }
 
     return 1;
+}
+
+
+# debug
+if ( 0 && $run_type eq 'test' ) {
+    
+    my $dconf = $dirs_conf->[0];
+    my $base_dir = $dconf->{src_dir};
+    my $sub_dir = 'subdir6/subdir5A-file';
+
+    my $full_path = catdir( $base_dir, $sub_dir );
+    my @dir_items = load_dir_content( $full_path );
+    
+    do_for_rar_file( 
+        $dconf,
+        [], # $finish_cmds
+        $base_dir,
+        $sub_dir,
+        'test14.part1.rar', # $file_name,
+        \@dir_items
+    );
+    $keypress_obj->cleanup_before_exit();
+    exit;
 }
 
 
@@ -523,6 +785,8 @@ foreach my $dconf ( @$dirs_conf ) {
     dumper( 'dconf', $dconf ) if $ver >= 5;
     unrar_dir(
         $done_list,
+        [], # $undo_cmds
+        [], # $finish_cmds
         $dconf,
         '', # $sub_dir
         0  # $deep
