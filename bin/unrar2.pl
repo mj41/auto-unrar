@@ -1,8 +1,7 @@
 # ToDo
 # mtime pro adresare
-# min_dir_mtime
 # check free space
-# duplicate names
+# unrar and duplicate names
 # unrar to temp directory - go back if error
 # * compare fname and fname.1 content, remove .1 if same
 # refactore, better configuration, help, ...
@@ -77,7 +76,7 @@ if ( $run_type ne 'final' ) {
             recursive => 1,
             remove_done => 1,
             move_non_rars => 1,
-            min_dir_mtime => 1*60*60, # seconds
+            min_dir_mtime => 60, # 1*60*60, # seconds
         },
     ];
 }
@@ -149,18 +148,20 @@ sub load_dir_content {
         print STDERR "Directory '$dir_name' not open for read.\n" if $ver >= 1;
         return undef;
     }
-    my @all_items = readdir($dir_h);
+    my @all_items = readdir( $dir_h );
     close($dir_h);
+    
+    return [] unless scalar @all_items;
 
-    my @items = ();
+    my $items = [];
     foreach my $name ( @all_items ) {
-        if ($name =~ /^\.$/) { next; }
-        if ($name =~ /^\..$/) { next; }
-        if ($name =~ /^\s*$/) { next; }
-        push @items, $name;
+        next if $name =~ /^\.$/;
+        next if $name =~ /^\..$/;
+        next if $name =~ /^\s*$/;
+        push @$items, $name;
     }
 
-    return @items;
+    return $items;
 }
 
 
@@ -227,6 +228,19 @@ sub save_item_done {
 }
 
 
+sub get_item_mtime {
+    my ( $path ) = @_;
+    
+    my $stat_obj = stat( $path );
+    unless ( defined $stat_obj ) {
+        print "Command stat for item '$path' failed.\n" if $ver >= 1;
+        return undef;
+    }
+    
+    return $stat_obj->mtime;
+}
+
+
 sub mkdir_copy_mtime {
     my ( $dest_dir_path, $src_dir_path ) = @_;
     
@@ -239,13 +253,9 @@ sub mkdir_copy_mtime {
         return 0;
     }
 
-    my $stat_obj = stat( $src_dir_path );
-    unless ( defined $stat_obj ) {
-        print "Command stat on '$src_dir_path' failed.\n" if $ver >= 1;
-        return 0;
-    }
+    my $src_mtime = get_item_mtime( $src_dir_path );
+    return 0 unless defined $src_mtime;
     
-    my $src_mtime = $stat_obj->mtime;
     unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
         print "Command utime '$dest_dir_path' failed: $^E\n" if $ver >= 1;
         return 0;
@@ -330,11 +340,14 @@ sub do_for_rar_file {
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
     
-    my $rar_obj = Archive::Rar->new(
+    my $rar_ver = $ver - 10;
+    $rar_ver = 0 if $rar_ver < 0;
+    my %rar_conf = (
         '-archive' => $file_path,
         '-initial' => $dest_dir,
-        '-verbose' => $ver - 10
     );
+    $rar_conf{'-verbose'} = $rar_ver if $rar_ver;
+    my $rar_obj = Archive::Rar->new( %rar_conf );
     $rar_obj->List();
     my @files_extracted = $rar_obj->GetBareList();
 
@@ -372,12 +385,14 @@ sub do_for_rar_file {
             push @rar_parts_list, $next_file_name;
 
             my $next_file_path = catfile( $base_dir, $sub_dir, $next_file_name );
-            my $next_rar_obj = Archive::Rar->new(
+            my %next_rar_conf = (
                 '-archive' => $next_file_path,
-                #'-quiet' => 1, # no way
-                '-initial' => $dest_dir
+                '-initial' => $dest_dir,
             );
+            $rar_conf{'-verbose'} = $rar_ver if $rar_ver;
+            my $next_rar_obj = Archive::Rar->new( %next_rar_conf );
             $next_rar_obj->List();
+
             my @next_files_extracted = $next_rar_obj->GetBareList();
             next NEXT_FILE unless scalar @next_files_extracted;
 
@@ -419,7 +434,7 @@ sub do_for_norar_file {
     push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $sub_dir ];
 
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
-    my $new_file_path = catfile( $dconf->{dest_dir}, $base_dir, $file_name );
+    my $new_file_path = catfile( $dconf->{dest_dir}, $sub_dir, $file_name );
 
     if ( $dconf->{move_non_rars} ) {
         print "Moving '$file_path' to '$new_file_path'.\n" if $ver >= 3;
@@ -442,18 +457,21 @@ sub get_next_file_path {
     my $num = 2;
     my $new_file_path;
     do {
-        $new_file_path = $new_file_path . '.' . $num;
+        $new_file_path = $file_path . '.' . $num;
         $num++;
     } while ( -e $new_file_path );
-    return $file_path;
+
+    return $new_file_path;
 }
 
 
 sub rm_empty_dir {
     my ( $dir_path ) = @_;
 
-    my @other_items = load_dir_content( $dir_path );
-    if ( scalar(@other_items) == 0 ) {
+    my $other_items = load_dir_content( $dir_path );
+    return 0 unless defined $other_items;
+    
+    if ( scalar(@$other_items) == 0 ) {
         unless ( rmdir($dir_path) ) {
             print "Command rmdir '$dir_path' failed: $^E\n" if $ver >= 1;
             return 0;
@@ -468,10 +486,11 @@ sub rm_empty_dir {
 sub rm_rec_empty_dir {
     my ( $dir_path ) = @_;
 
-    my @dir_items = load_dir_content( $dir_path );
+    my $dir_items = load_dir_content( $dir_path );
+    return 0 unless defined $dir_items;
 
-    if ( scalar @dir_items ) {
-        foreach my $name ( @dir_items ) {
+    if ( scalar @$dir_items ) {
+        foreach my $name ( @$dir_items ) {
             my $path = catfile( $dir_path, $name );
             unless ( -d $path ) {
                 print "Can't remove dir with items '$dir_path' (item '$name').\n" if $ver >= 1;
@@ -480,13 +499,42 @@ sub rm_rec_empty_dir {
         }
 
         # Only dirs remains.
-        foreach my $name ( @dir_items ) {
+        foreach my $name ( @$dir_items ) {
             my $path = catfile( $dir_path, $name );
             return 0 unless rm_rec_empty_dir( $path );
         }
     }
     
     return rm_empty_dir( $dir_path );
+}
+
+
+sub get_rec_dir_mtime {
+    my ( $dir_path ) = @_;
+
+    my $max_mtime = get_item_mtime( $dir_path );
+    return undef unless defined $max_mtime;
+    #print "Dir '$dir_path' max mtime " . (localtime $max_mtime) . " (max mtime " . (localtime $max_mtime) . ")\n" if $ver >= 8;
+
+    my $dir_items = load_dir_content( $dir_path );
+    return undef unless defined $dir_items;
+    return $max_mtime unless scalar @$dir_items;
+
+    foreach my $name ( @$dir_items ) {
+        my $path = catdir( $dir_path, $name );
+
+        my $item_mtime = get_item_mtime( $path );
+        $max_mtime = $item_mtime if $item_mtime && $item_mtime > $max_mtime;
+        #print "Item '$path' max mtime " . (localtime $item_mtime) . " (max mtime " . (localtime $max_mtime) . ")\n" if $ver >= 8;
+        
+        if ( -d $path ) {
+            my $subdir_max_mtime = get_rec_dir_mtime( $path );
+            return undef unless defined $subdir_max_mtime;
+            $max_mtime = $subdir_max_mtime if $subdir_max_mtime > $max_mtime;
+            #print "Subdir '$path' max mtime " . (localtime $subdir_max_mtime) . " (max mtime " . (localtime $max_mtime) . ")\n" if $ver >= 8;
+        }
+    }
+    return $max_mtime;
 }
 
 
@@ -526,7 +574,7 @@ sub do_cmds {
             my $file_path = shift @$cmd_conf;
             my $new_file_path = shift @$cmd_conf;
 
-            $new_file_path = get_next_file_path( $new_file_path) if -e $new_file_path;
+            $new_file_path = get_next_file_path( $new_file_path ) if -e $new_file_path;
             unless ( move($file_path, $new_file_path) ) {
                print "Command move '$file_path' '$new_file_path' failed: $^E\n" if $ver >= 1;
                $all_ok = 0;
@@ -579,22 +627,38 @@ sub unrar_dir {
 
     my $dir_name = catdir( $base_dir, $sub_dir );
     print "Entering directory '$dir_name'\n" if $ver >= 3;
-
-    my @items = load_dir_content( $dir_name );
+    
+    my $items = load_dir_content( $dir_name );
+    return 0 unless defined $items;
+    return 1 unless scalar @$items;
 
     $keypress_obj->process_keypress();
 
     my $space = '  ' x $deep;
 
     # dirs
-    foreach my $name ( sort @items ) {
+    foreach my $name ( sort @$items ) {
         my $new_sub_dir = catdir( $sub_dir, $name );
         next if exists $done_list->{ $new_sub_dir };
 
         my $path = catdir( $base_dir, $new_sub_dir );
 
-        # directories
+        # directories only
         next unless -d $path;
+
+        if ( $deep + 1 == $dconf->{done_list_deep} ) {
+            my $max_mtime = get_rec_dir_mtime( $path );
+            return 0 unless defined $max_mtime;
+            
+            print "Directory '$path' max mtime " . (localtime $max_mtime) . "\n" if $ver >= 4;
+            if ( defined $dconf->{min_dir_mtime} ) {
+                if ( time() - $dconf->{min_dir_mtime} < $max_mtime ) {
+                    print "Directory '$path' max mtime " . (localtime $max_mtime) . " is too high.\n" if $ver >= 2;
+                    next;
+                }
+                print "Directory '$path' max mtime " . (localtime $max_mtime) . " is low enought.\n" if $ver >= 4;
+            }
+        }
 
         do_for_dir( $dconf, $finish_cmds, $base_dir, $sub_dir, $name );
 
@@ -604,6 +668,10 @@ sub unrar_dir {
             if ( unrar_dir( $done_list, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
                 if ( $deep < $dconf->{done_list_deep} ) {
+
+                    # Add this to done list.
+                    push @$finish_cmds, [ 'save_done', $new_sub_dir ];
+
                     # Finish command.
                     if ( scalar @$finish_cmds ) {
                         dumper( "Finishing prev sub_dir '$sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
@@ -632,16 +700,18 @@ sub unrar_dir {
                 $finish_cmds = [];
                 next;
             }
-
+            
+            # Unrar failed and nothing to undo (too deeper).
             return 0;
         }
-        push @$finish_cmds, [ 'save_done', $new_sub_dir ] if $deep < $dconf->{done_list_deep};
-    }
+
+    } # end foreach dir
+
 
     my $extrace_error_found = 0;
     my $files_done = {};
     # find first parts or rars
-    foreach my $name ( sort @items ) {
+    foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $done_list->{ $file_sub_path };
 
@@ -656,7 +726,7 @@ sub unrar_dir {
             }
 
             my ( $rar_rc, $extract_err, $files_extracted, $rar_parts_list ) = do_for_rar_file(
-                $dconf, $finish_cmds, $base_dir, $sub_dir, $name, \@items
+                $dconf, $finish_cmds, $base_dir, $sub_dir, $name, $items
             );
 
             print "$sub_dir, $name -- rar_rc $rar_rc, $extract_err\n" if $ver >= 8;
@@ -705,7 +775,7 @@ sub unrar_dir {
 
 
     # no rar files
-    foreach my $name ( sort @items ) {
+    foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $done_list->{ $file_sub_path };
         next if exists $files_done->{ $file_sub_path };
@@ -747,7 +817,8 @@ if ( 0 && $run_type eq 'test' ) {
     my $sub_dir = 'subdir6/subdir5A-file';
 
     my $full_path = catdir( $base_dir, $sub_dir );
-    my @dir_items = load_dir_content( $full_path );
+    my $dir_items = load_dir_content( $full_path );
+    exit unless defined $dir_items;
     
     do_for_rar_file( 
         $dconf,
@@ -755,7 +826,7 @@ if ( 0 && $run_type eq 'test' ) {
         $base_dir,
         $sub_dir,
         'test14.part1.rar', # $file_name,
-        \@dir_items
+        $dir_items
     );
     $keypress_obj->cleanup_before_exit();
     exit;
