@@ -42,6 +42,8 @@ if ( ! $run_type || $run_type !~  /^(test|final)$/i ) {
 my $ver = $ARGV[1];
 $ver = 2 unless defined $ver;
 
+my $only_dconf_name = $ARGV[2];
+
 print "Run type: $run_type\n" if $ver >= 2;
 
 
@@ -792,7 +794,7 @@ sub unrar_dir {
     if ( $sub_dir ) {
         # remove empty dirs
         if ( $dconf->{remove_done} ) {
-            push @$finish_cmds, [ 'rm_empty_dir', $dir_name ];
+            push @$finish_cmds, [ 'rm_rec_empty_dir', $dir_name ];
         }
     }
 
@@ -834,6 +836,13 @@ if ( 0 && $run_type eq 'test' ) {
 
 
 foreach my $dconf ( @$dirs_conf ) {
+
+    # skip if only one selected
+    if ( defined $only_dconf_name && $dconf->{name} ne $only_dconf_name ) {
+        print "Skipping configuration $dconf->{name} (!=$only_dconf_name).\n" if $ver >= 2;
+        next;
+    }
+    
     unless ( -d $dconf->{src_dir} ) {
         print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
         next;
