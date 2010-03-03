@@ -7,11 +7,14 @@
 # refactore, better configuration, help, ...
 # merge changes to Archive::Rar
 # password protected archives support
-# backup old version of done_list files, remove backup after normal end
+# backup old version of state_fpath files, remove backup after normal end
 # add run_type as dynamic conf name
 # after failed - save info about files - try if changed
 # full paths of files in archive
 # refactor to Perl package
+# add archive parts count check
+# use do_cmd_sub inside do_cmds ?
+
 
 use strict;
 use warnings;
@@ -32,19 +35,42 @@ use App::KeyPress;
 use Archive::Rar;
 
 
-my $run_type = $ARGV[0];
-if ( ! $run_type || $run_type !~  /^(test|final)$/i ) {
-    print "Usage:\n";
-    print "  perl unrar2.pl test\n";
-    print "  perl unrar2.pl final\n";
+my $conf_fpath = $ARGV[0];
+
+if ( $conf_fpath eq 'MY' ) {
+    $conf_fpath = catfile( $RealBin, '..', 'conf', 'unrar-my-conf.pl' );
+
+} elsif ( $conf_fpath eq 'DATA' ) {
+    $conf_fpath = catfile( $RealBin, '..', 'conf', 'unrar-data-conf.pl' );
 }
+
 
 my $ver = $ARGV[1];
 $ver = 2 unless defined $ver;
 
+unless ( $conf_fpath ) {
+    print <<HELP_END;
+Usage:
+  perl unrar2.pl ../conf/unrar-data-conf.pl
+  perl unrar2.pl DATA
+     ... same as above
+
+  perl unrar2.pl ../conf/unrar-my-conf.pl
+  perl unrar2.pl MY
+     ... same as above
+ 
+HELP_END
+    exit;
+}
+
+unless ( -f $conf_fpath ) {
+    print "Can't find defined config file '$conf_fpath'\n";
+    exit;
+}
+
+
 my $only_dconf_name = $ARGV[2];
 
-print "Run type: $run_type\n" if $ver >= 2;
 
 
 my $keypress_obj = App::KeyPress->new(
@@ -61,26 +87,18 @@ sub my_croak {
 
 
 
-my $dirs_conf = [
-];
-
-
-# devel
-if ( $run_type ne 'final' ) {
-    $dirs_conf = [
-        {
-            name => 'test',
-            src_dir => '/mnt/pole2/scripts/auto-unrar-test/in',
-            dest_dir => '/mnt/pole2/scripts/auto-unrar-test/out',
-            done_list => '/mnt/pole2/scripts/auto-unrar-test/test-unrar.db',
-            exclude_list => '/mnt/pole2/scripts/auto-unrar-test/rsync-exclude.txt',
-            done_list_deep => 1,
-            recursive => 1,
-            remove_done => 1,
-            move_non_rars => 1,
-            min_dir_mtime => 60, # 1*60*60, # seconds
-        },
-    ];
+sub load_config {
+    my ( $conf_fpath ) = @_;
+    
+    print "Loadinf config from '$conf_fpath'.\n" if $ver >= 3;
+    my( $exception, $conf );
+    {
+        local $@;
+        $conf = do $conf_fpath;
+        $exception = $@;
+    }
+    my_croak( $exception ) if $exception;
+    return $conf;
 }
 
 
@@ -196,15 +214,17 @@ sub do_cmd_sub {
 
 
 sub save_item_done {
-    my ( $done_list, $dconf, $item_name ) = @_;
+    my ( $state, $dconf, $item_name ) = @_;
 
-    $done_list->{$item_name} = time();
+    if ( defined $item_name ) {
+        $state->{done}->{$item_name} = time();
+    }
 
     do_cmd_sub(
-        sub { store( $done_list, $dconf->{done_list} ); },
-        "Store done list to '$dconf->{done_list}' failed."
+        sub { store( $state, $dconf->{state_fpath} ); },
+        "Store done list to '$dconf->{state_fpath}' failed."
     );
-    print "Item '$item_name' saved to done_list.\n" if $ver >= 5;
+    print "Item '$item_name' saved to state_fpath.\n" if $ver >= 5;
 
 
     if ( $dconf->{exclude_list} ) {
@@ -216,7 +236,7 @@ sub save_item_done {
             },
             "Open file '$dconf->{exclude_list}' for write."
         );
-        foreach my $item ( sort keys %$done_list ) {
+        foreach my $item ( sort keys %{ $state->{done} } ) {
             my $line = "- $item\n";
             print $out_fh $line;
         }
@@ -227,6 +247,12 @@ sub save_item_done {
     }
 
     return 1;
+}
+
+
+sub save_state {
+    my ( $state, $dconf ) = @_;
+    return save_item_done( $state, $dconf, undef );
 }
 
 
@@ -541,7 +567,7 @@ sub get_rec_dir_mtime {
 
 
 sub do_cmds {
-    my ( $done_list, $dconf, $finish_cmds ) = @_;
+    my ( $state, $dconf, $finish_cmds ) = @_;
 
     my $all_ok = 1;
     foreach my $cmd_conf ( @$finish_cmds ) {
@@ -558,7 +584,7 @@ sub do_cmds {
         # save_done
         } elsif ( $cmd eq 'save_done' ) {
             my $item_name = shift @$cmd_conf;
-            unless ( save_item_done($done_list, $dconf, $item_name) ) {
+            unless ( save_item_done($state, $dconf, $item_name) ) {
                 $all_ok = 0;
             }
 
@@ -623,7 +649,7 @@ sub do_cmds {
 
 
 sub unrar_dir {
-    my ( $done_list, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
+    my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
 
     my $base_dir = $dconf->{'src_dir'};
 
@@ -641,14 +667,14 @@ sub unrar_dir {
     # dirs
     foreach my $name ( sort @$items ) {
         my $new_sub_dir = catdir( $sub_dir, $name );
-        next if exists $done_list->{ $new_sub_dir };
+        next if exists $state->{done}->{ $new_sub_dir };
 
         my $path = catdir( $base_dir, $new_sub_dir );
 
         # directories only
         next unless -d $path;
 
-        if ( $deep + 1 == $dconf->{done_list_deep} ) {
+        if ( $deep + 1 == $dconf->{basedir_deep} ) {
             my $max_mtime = get_rec_dir_mtime( $path );
             return 0 unless defined $max_mtime;
             
@@ -667,9 +693,9 @@ sub unrar_dir {
         if ( $dconf->{recursive} ) {
             
             # Going deeper and deeper inside directory structure.
-            if ( unrar_dir( $done_list, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
+            if ( unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
-                if ( $deep < $dconf->{done_list_deep} ) {
+                if ( $deep < $dconf->{basedir_deep} ) {
 
                     # Add this to done list.
                     push @$finish_cmds, [ 'save_done', $new_sub_dir ];
@@ -677,7 +703,7 @@ sub unrar_dir {
                     # Finish command.
                     if ( scalar @$finish_cmds ) {
                         dumper( "Finishing prev sub_dir '$sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
-                        do_cmds( $done_list, $dconf, $finish_cmds );
+                        do_cmds( $state, $dconf, $finish_cmds );
                     }
 
                     # Empty stacks.
@@ -690,12 +716,12 @@ sub unrar_dir {
 
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed.\n" if $ver >= 5;
-            if ( $deep < $dconf->{done_list_deep} ) {
+            if ( $deep < $dconf->{basedir_deep} ) {
                 # Undo command.
                 my $dest_path = catdir( $dconf->{dest_dir}, $new_sub_dir );
                 push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
                 dumper( "Undo prev sub_dir '$sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
-                do_cmds( $done_list, $dconf, $undo_cmds );
+                do_cmds( $state, $dconf, $undo_cmds );
                 
                 # Empty stacks.
                 $undo_cmds = [];
@@ -715,7 +741,7 @@ sub unrar_dir {
     # find first parts or rars
     foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
-        next if exists $done_list->{ $file_sub_path };
+        next if exists $state->{done}->{ $file_sub_path };
 
         my $path = catdir( $dir_name, $name );
         # all files
@@ -764,7 +790,7 @@ sub unrar_dir {
                     foreach my $part ( @$rar_parts_list ) {
                         print "Archive part '$part' processed.\n" if $ver >= 5;
                         my $part_path = catfile( $sub_dir, $part );
-                        push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{done_list_deep};
+                        push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{basedir_deep};
                         if ( $dconf->{remove_done} ) {
                             my $full_part_path = catdir( $dir_name, $part );
                             push @$finish_cmds, [ 'unlink', $full_part_path ];
@@ -779,7 +805,7 @@ sub unrar_dir {
     # no rar files
     foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
-        next if exists $done_list->{ $file_sub_path };
+        next if exists $state->{done}->{ $file_sub_path };
         next if exists $files_done->{ $file_sub_path };
 
         my $path = catdir( $dir_name, $name );
@@ -787,7 +813,7 @@ sub unrar_dir {
         if ( -f $path ) {
             #print "$space$name ($path) " if $ver >= 3;
             do_for_norar_file( $dconf, $finish_cmds, $base_dir, $sub_dir, $name );
-            push @$finish_cmds, [ 'save_done', $file_sub_path ] if $deep < $dconf->{done_list_deep};
+            push @$finish_cmds, [ 'save_done', $file_sub_path ] if $deep < $dconf->{basedir_deep};
         }
     }
 
@@ -798,11 +824,11 @@ sub unrar_dir {
         }
     }
 
-    if ( $deep < $dconf->{done_list_deep} ) {
+    if ( $deep < $dconf->{basedir_deep} ) {
         # Finish prev.
         if ( scalar @$finish_cmds ) {
             dumper( "finishing prev sub_dir '$sub_dir'", $finish_cmds ) if $ver >= 5;
-            do_cmds( $done_list, $dconf, $finish_cmds );
+            do_cmds( $state, $dconf, $finish_cmds );
             $finish_cmds = [];
         }
     }
@@ -811,8 +837,12 @@ sub unrar_dir {
 }
 
 
+my $dirs_conf = load_config( $conf_fpath );
+# dumper( '$dirs_conf', $dirs_conf ); my_croak(); # debug
+
+
 # debug
-if ( 0 && $run_type eq 'test' ) {
+if ( 0 ) {
     
     my $dconf = $dirs_conf->[0];
     my $base_dir = $dconf->{src_dir};
@@ -831,7 +861,7 @@ if ( 0 && $run_type eq 'test' ) {
         $dir_items
     );
     $keypress_obj->cleanup_before_exit();
-    exit;
+    my_croak();
 }
 
 
@@ -853,18 +883,33 @@ foreach my $dconf ( @$dirs_conf ) {
         next;
     }
 
-    my $done_list = undef;
-    if ( -e $dconf->{done_list} ) {
-        $done_list = retrieve( $dconf->{done_list} );
-    } else {
-        $done_list = {
+    my $state = undef;
+    if ( -e $dconf->{state_fpath} ) {
+        $state = retrieve( $dconf->{state_fpath} );
 
+    } else {
+        $state = {
+            'done' => {},
+            'err' => {},
         };
+    }
+    
+    # Special state changes.
+    if ( 0 ) {
+        my $key_to_remove = undef; 
+
+        if ( $key_to_remove && exists $state->{done}->{$key_to_remove} ) {
+            dumper( 'old $state', $state );
+            delete $state->{done}->{$key_to_remove};
+            dumper( 'new $state', $state );
+            save_state( $state, $dconf );
+        }
+        next;
     }
 
     dumper( 'dconf', $dconf ) if $ver >= 5;
     unrar_dir(
-        $done_list,
+        $state,
         [], # $undo_cmds
         [], # $finish_cmds
         $dconf,
@@ -872,7 +917,7 @@ foreach my $dconf ( @$dirs_conf ) {
         0  # $deep
     );
 
-    dumper( "done list for '$dconf->{name}':", $done_list ) if $ver >= 5;
+    dumper( "done list for '$dconf->{name}':", $state ) if $ver >= 5;
 
 }
 
