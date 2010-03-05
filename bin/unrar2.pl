@@ -28,7 +28,7 @@ use File::stat;
 
 use Storable;
 use Data::Dumper;
-
+use Digest::SHA1;
 
 use lib 'lib';
 use App::KeyPress;
@@ -213,6 +213,87 @@ sub do_cmd_sub {
 }
 
 
+sub get_item_info {
+    my ( $base_path, $item_sub_path ) = @_;
+
+    my $item_path = catdir( $base_path, $item_sub_path );
+    my $stat_obj = get_item_stat_obj( $item_path );
+    return undef unless $stat_obj;
+    
+    my $info = {
+        path => $item_sub_path,
+        mtime => $stat_obj->mtime, 
+    };
+    if ( -d $item_path ) {
+        $info->{is_dir} = 1;
+    } else {
+        $info->{size} = $stat_obj->size;
+    }
+    return $info;
+}
+
+
+sub get_rec_content_info {
+    my ( $info, $base_path, $item_sub_path ) = @_;
+
+  
+    my $item_info = get_item_info( $base_path, $item_sub_path );
+    return undef unless defined $item_info;
+    push @$info, $item_info;
+
+    my $item_path = catdir( $base_path, $item_sub_path );
+
+    # No directory.
+    return 1 unless -d $item_path;
+    
+    my $dir_items = load_dir_content( $item_path );
+    return undef unless defined $dir_items;
+
+    foreach my $sitem_name ( sort @$dir_items ) {
+        my $sitem_sub_path = catdir( $item_sub_path, $sitem_name );
+        my $sret_code = get_rec_content_info( $info, $base_path, $sitem_sub_path );
+        return undef unless $sret_code;
+    }
+    
+    return 1;
+}
+
+
+sub get_content_info_and_hash {
+    my ( $base_path, $item_sub_path ) = @_;
+    
+    my $info = [];
+    my $ret_code = get_rec_content_info( $info, $base_path, $item_sub_path );
+    return ( undef, undef ) unless $ret_code;
+    
+    my $hash_str = '';
+    foreach my $item_info ( @$info ) {
+        map { $hash_str .= '|' . $_ . '|' . $item_info->{$_} } sort keys %$item_info;
+        $hash_str .= '|';
+    }
+    my $hash = Digest::SHA1::sha1_hex( $hash_str );
+    return ( $info, $hash );
+}
+
+
+sub save_item_rec_content_info {
+    my ( $state, $dconf, $base_path, $item_sub_path, $info, $save_content_info ) = @_;
+    $info = {} unless defined $info;
+
+    my ( $content_info, $hash ) = get_content_info_and_hash( $base_path, $item_sub_path );
+    $info->{time} = time();
+    if ( $save_content_info ) {
+        $info->{content} = $content_info;
+    }
+    $info->{content_meta_hash} = $hash;
+
+    $state->{info}->{$item_sub_path} = [] unless defined $state->{info}->{$item_sub_path};
+    push @{ $state->{info}->{$item_sub_path} }, $info;
+
+    return 1;
+}
+
+
 sub save_item_done {
     my ( $state, $dconf, $item_name ) = @_;
 
@@ -224,7 +305,11 @@ sub save_item_done {
         sub { store( $state, $dconf->{state_fpath} ); },
         "Store done list to '$dconf->{state_fpath}' failed."
     );
-    print "Item '$item_name' saved to state_fpath.\n" if $ver >= 5;
+    if ( defined $item_name ) {
+        print "Item '$item_name' saved to state_fpath.\n" if $ver >= 5;
+    } else {
+        print "State saved to state_fpath.\n" if $ver >= 5;
+    }
 
 
     if ( $dconf->{exclude_list} ) {
@@ -256,7 +341,7 @@ sub save_state {
 }
 
 
-sub get_item_mtime {
+sub get_item_stat_obj {
     my ( $path ) = @_;
     
     my $stat_obj = stat( $path );
@@ -264,6 +349,15 @@ sub get_item_mtime {
         print "Command stat for item '$path' failed.\n" if $ver >= 1;
         return undef;
     }
+    return $stat_obj;
+}
+
+
+sub get_item_mtime {
+    my ( $path ) = @_;
+    
+    my $stat_obj = get_item_stat_obj( $path );
+    return undef unless $stat_obj;
     
     return $stat_obj->mtime;
 }
@@ -329,9 +423,8 @@ sub mkpath_copy_mtime {
 
 
 sub do_for_dir {
-    my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $dir_name ) = @_;
-    my $full_subdir = catdir( $sub_dir, $dir_name );
-    push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $full_subdir ];
+    my ( $dconf, $finish_cmds, $base_dir, $sub_dir ) = @_;
+    push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $sub_dir ];
     return 1;
 }
 
@@ -675,6 +768,7 @@ sub unrar_dir {
         next unless -d $path;
 
         if ( $deep + 1 == $dconf->{basedir_deep} ) {
+            # Check change time.
             my $max_mtime = get_rec_dir_mtime( $path );
             return 0 unless defined $max_mtime;
             
@@ -686,9 +780,22 @@ sub unrar_dir {
                 }
                 print "Directory '$path' max mtime " . (localtime $max_mtime) . " is low enought.\n" if $ver >= 4;
             }
+            
+            if ( exists $state->{info}->{ $new_sub_dir } ) {
+                my $last_info = ${$state->{info}->{ $new_sub_dir }}[-1];
+                my $last_hash = $last_info->{content_meta_hash};
+                # dumper( 'info', $last_info ); # debug
+                my ( $new_content_info, $new_hash ) = get_content_info_and_hash( $base_dir, $new_sub_dir );
+                if ( $new_hash eq $last_hash ) {
+                    print "Directory '$path' content hash is same. Skipping unpacking.\n" if $ver >= 3;
+                    next;
+                }
+                print "Directory '$path' content hash changed.\n" if $ver >= 4;
+            }
+            
         }
 
-        do_for_dir( $dconf, $finish_cmds, $base_dir, $sub_dir, $name );
+        do_for_dir( $dconf, $finish_cmds, $base_dir, $new_sub_dir, $name );
 
         if ( $dconf->{recursive} ) {
             
@@ -697,12 +804,22 @@ sub unrar_dir {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
                 if ( $deep < $dconf->{basedir_deep} ) {
 
+                    if ( $dconf->{save_ok_info} ) {
+                        # Save state when error occured.
+                        my $base_info = {
+                            ok => 1,
+                            type => 'rar',
+                        };
+                        my $save_full_info = 1;
+                        save_item_rec_content_info( $state, $dconf, $base_dir, $new_sub_dir, $base_info, $save_full_info );
+                    }
+
                     # Add this to done list.
                     push @$finish_cmds, [ 'save_done', $new_sub_dir ];
 
                     # Finish command.
                     if ( scalar @$finish_cmds ) {
-                        dumper( "Finishing prev sub_dir '$sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
+                        dumper( "Finishing prev sub_dir '$new_sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
                         do_cmds( $state, $dconf, $finish_cmds );
                     }
 
@@ -717,10 +834,23 @@ sub unrar_dir {
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed.\n" if $ver >= 5;
             if ( $deep < $dconf->{basedir_deep} ) {
+
+                # Save state when error occured.
+                my $base_info = {
+                    error => 1,
+                    error_info => {
+                        # log => $dir_log,
+                        type => 'rar',
+                    },
+                };
+                my $save_full_info = ( $dconf->{save_err_info} );
+                save_item_rec_content_info( $state, $dconf, $base_dir, $new_sub_dir, $base_info, $save_full_info );
+                # dumper( '$state', $state ); # debug
+
                 # Undo command.
                 my $dest_path = catdir( $dconf->{dest_dir}, $new_sub_dir );
                 push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
-                dumper( "Undo prev sub_dir '$sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
+                dumper( "Undo prev sub_dir '$new_sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
                 do_cmds( $state, $dconf, $undo_cmds );
                 
                 # Empty stacks.
@@ -890,14 +1020,19 @@ foreach my $dconf ( @$dirs_conf ) {
     } else {
         $state = {
             'done' => {},
-            'err' => {},
         };
     }
     
     # Special state changes.
     if ( 0 ) {
-        my $key_to_remove = undef; 
+        # My own probably changes in stored data.
+        if ( 0 ) {
+            delete $state->{err};
+            save_state( $state, $dconf );
+            next;
+        }
 
+        my $key_to_remove = undef;
         if ( $key_to_remove && exists $state->{done}->{$key_to_remove} ) {
             dumper( 'old $state', $state );
             delete $state->{done}->{$key_to_remove};

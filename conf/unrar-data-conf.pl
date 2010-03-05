@@ -10,5 +10,7 @@ return [
         remove_done => 1,
         move_non_rars => 1,
         min_dir_mtime => 5*60, # seconds
+        save_ok_info => 1,
+        save_err_info => 1,
     },
 ];
