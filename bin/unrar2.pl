@@ -290,7 +290,7 @@ sub save_item_rec_content_info {
     $state->{info}->{$item_sub_path} = [] unless defined $state->{info}->{$item_sub_path};
     push @{ $state->{info}->{$item_sub_path} }, $info;
 
-    return 1;
+    return save_state( $state, $dconf );
 }
 
 
@@ -792,7 +792,6 @@ sub unrar_dir {
                 }
                 print "Directory '$path' content hash changed.\n" if $ver >= 4;
             }
-            
         }
 
         do_for_dir( $dconf, $finish_cmds, $base_dir, $new_sub_dir, $name );
@@ -1052,7 +1051,7 @@ foreach my $dconf ( @$dirs_conf ) {
         0  # $deep
     );
 
-    dumper( "done list for '$dconf->{name}':", $state ) if $ver >= 5;
+    dumper( "state for '$dconf->{name}':", $state ) if $ver >= 5;
 
 }
 
