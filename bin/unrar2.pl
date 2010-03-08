@@ -8,9 +8,7 @@
 # merge changes to Archive::Rar
 # password protected archives support
 # backup old version of state_fpath files, remove backup after normal end
-# add run_type as dynamic conf name
-# after failed - save info about files - try if changed
-# full paths of files in archive
+# unrar/test full paths of files in archive
 # refactor to Perl package
 # add archive parts count check
 # use do_cmd_sub inside do_cmds ?
