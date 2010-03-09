@@ -56,7 +56,7 @@ Usage:
   perl unrar2.pl ../conf/unrar-my-conf.pl
   perl unrar2.pl MY
      ... same as above
- 
+
 HELP_END
     exit;
 }
@@ -87,7 +87,7 @@ sub my_croak {
 
 sub load_config {
     my ( $conf_fpath ) = @_;
-    
+
     print "Loadinf config from '$conf_fpath'.\n" if $ver >= 3;
     my( $exception, $conf );
     {
@@ -168,7 +168,7 @@ sub load_dir_content {
     }
     my @all_items = readdir( $dir_h );
     close($dir_h);
-    
+
     return [] unless scalar @all_items;
 
     my $items = [];
@@ -217,10 +217,10 @@ sub get_item_info {
     my $item_path = catdir( $base_path, $item_sub_path );
     my $stat_obj = get_item_stat_obj( $item_path );
     return undef unless $stat_obj;
-    
+
     my $info = {
         path => $item_sub_path,
-        mtime => $stat_obj->mtime, 
+        mtime => $stat_obj->mtime,
     };
     if ( -d $item_path ) {
         $info->{is_dir} = 1;
@@ -234,7 +234,7 @@ sub get_item_info {
 sub get_rec_content_info {
     my ( $info, $base_path, $item_sub_path ) = @_;
 
-  
+
     my $item_info = get_item_info( $base_path, $item_sub_path );
     return undef unless defined $item_info;
     push @$info, $item_info;
@@ -243,7 +243,7 @@ sub get_rec_content_info {
 
     # No directory.
     return 1 unless -d $item_path;
-    
+
     my $dir_items = load_dir_content( $item_path );
     return undef unless defined $dir_items;
 
@@ -252,18 +252,18 @@ sub get_rec_content_info {
         my $sret_code = get_rec_content_info( $info, $base_path, $sitem_sub_path );
         return undef unless $sret_code;
     }
-    
+
     return 1;
 }
 
 
 sub get_content_info_and_hash {
     my ( $base_path, $item_sub_path ) = @_;
-    
+
     my $info = [];
     my $ret_code = get_rec_content_info( $info, $base_path, $item_sub_path );
     return ( undef, undef ) unless $ret_code;
-    
+
     my $hash_str = '';
     foreach my $item_info ( @$info ) {
         map { $hash_str .= '|' . $_ . '|' . $item_info->{$_} } sort keys %$item_info;
@@ -341,7 +341,7 @@ sub save_state {
 
 sub get_item_stat_obj {
     my ( $path ) = @_;
-    
+
     my $stat_obj = stat( $path );
     unless ( defined $stat_obj ) {
         print "Command stat for item '$path' failed.\n" if $ver >= 1;
@@ -353,21 +353,21 @@ sub get_item_stat_obj {
 
 sub get_item_mtime {
     my ( $path ) = @_;
-    
+
     my $stat_obj = get_item_stat_obj( $path );
     return undef unless $stat_obj;
-    
+
     return $stat_obj->mtime;
 }
 
 
 sub mkdir_copy_mtime {
     my ( $dest_dir_path, $src_dir_path ) = @_;
-    
+
     return 1 if -d $dest_dir_path;
-    
+
     print "mkdir_copy_mtime '$src_dir_path' -> '$dest_dir_path'\n" if $ver >= 8;
-    
+
     unless ( mkdir( $dest_dir_path, 0777 ) ) {
         print "Command mkdir '$dest_dir_path' failed: $^E\n" if $ver >= 1;
         return 0;
@@ -375,7 +375,7 @@ sub mkdir_copy_mtime {
 
     my $src_mtime = get_item_mtime( $src_dir_path );
     return 0 unless defined $src_mtime;
-    
+
     unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
         print "Command utime '$dest_dir_path' failed: $^E\n" if $ver >= 1;
         return 0;
@@ -387,7 +387,7 @@ sub mkdir_copy_mtime {
 
 sub mkpath_copy_mtime {
     my ( $dest_base_dir, $src_base_dir, $sub_dirs ) = @_;
-    
+
     my $full_dest_dir = catdir( $dest_base_dir, $sub_dirs );
     return 1 if -d $full_dest_dir;
 
@@ -415,7 +415,7 @@ sub mkpath_copy_mtime {
         $tmp_src_dir = catdir( $tmp_src_dir, $dir );
         return 0 unless mkdir_copy_mtime( $tmp_dest_dir, $tmp_src_dir );
     }
-    
+
     return 1;
 }
 
@@ -458,7 +458,7 @@ sub do_for_rar_file {
 
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
-    
+
     my $rar_ver = $ver - 10;
     $rar_ver = 0 if $rar_ver < 0;
     my %rar_conf = (
@@ -589,7 +589,7 @@ sub rm_empty_dir {
 
     my $other_items = load_dir_content( $dir_path );
     return 0 unless defined $other_items;
-    
+
     if ( scalar(@$other_items) == 0 ) {
         unless ( rmdir($dir_path) ) {
             print "Command rmdir '$dir_path' failed: $^E\n" if $ver >= 1;
@@ -623,7 +623,7 @@ sub rm_rec_empty_dir {
             return 0 unless rm_rec_empty_dir( $path );
         }
     }
-    
+
     return rm_empty_dir( $dir_path );
 }
 
@@ -645,7 +645,7 @@ sub get_rec_dir_mtime {
         my $item_mtime = get_item_mtime( $path );
         $max_mtime = $item_mtime if $item_mtime && $item_mtime > $max_mtime;
         #print "Item '$path' max mtime " . (localtime $item_mtime) . " (max mtime " . (localtime $max_mtime) . ")\n" if $ver >= 8;
-        
+
         if ( -d $path ) {
             my $subdir_max_mtime = get_rec_dir_mtime( $path );
             return undef unless defined $subdir_max_mtime;
@@ -663,7 +663,7 @@ sub do_cmds {
     my $all_ok = 1;
     foreach my $cmd_conf ( @$finish_cmds ) {
         my $cmd = shift @$cmd_conf;
-        
+
         # unlink
         if ( $cmd eq 'unlink' ) {
             my $full_part_path = shift @$cmd_conf;
@@ -671,7 +671,7 @@ sub do_cmds {
                 print "Command unlink '$full_part_path' failed: $^E\n" if $ver >= 1;
                 $all_ok = 0;
             }
-        
+
         # save_done
         } elsif ( $cmd eq 'save_done' ) {
             my $item_name = shift @$cmd_conf;
@@ -682,7 +682,7 @@ sub do_cmds {
         # rmdir
         } elsif ( $cmd eq 'rmdir' ) {
             my $dir_name = shift @$cmd_conf;
-            
+
             unless ( rmdir($dir_name) ) {
                 print "Command rmdir '$dir_name' failed: $! $^E\n" if $ver >= 1;
                 $all_ok = 0;
@@ -731,7 +731,7 @@ sub do_cmds {
             $all_ok = 0 unless rm_rec_empty_dir( $dir_path );
 
         }
-    
+
     } # foreach
 
     return $all_ok;
@@ -746,7 +746,7 @@ sub unrar_dir {
 
     my $dir_name = catdir( $base_dir, $sub_dir );
     print "Entering directory '$dir_name'\n" if $ver >= 3;
-    
+
     my $items = load_dir_content( $dir_name );
     return 0 unless defined $items;
     return 1 unless scalar @$items;
@@ -769,7 +769,7 @@ sub unrar_dir {
             # Check change time.
             my $max_mtime = get_rec_dir_mtime( $path );
             return 0 unless defined $max_mtime;
-            
+
             print "Directory '$path' max mtime " . (localtime $max_mtime) . "\n" if $ver >= 4;
             if ( defined $dconf->{min_dir_mtime} ) {
                 if ( time() - $dconf->{min_dir_mtime} < $max_mtime ) {
@@ -778,7 +778,7 @@ sub unrar_dir {
                 }
                 print "Directory '$path' max mtime " . (localtime $max_mtime) . " is low enought.\n" if $ver >= 4;
             }
-            
+
             if ( exists $state->{info}->{ $new_sub_dir } ) {
                 my $last_info = ${$state->{info}->{ $new_sub_dir }}[-1];
                 my $last_hash = $last_info->{content_meta_hash};
@@ -795,7 +795,7 @@ sub unrar_dir {
         do_for_dir( $dconf, $finish_cmds, $base_dir, $new_sub_dir, $name );
 
         if ( $dconf->{recursive} ) {
-            
+
             # Going deeper and deeper inside directory structure.
             if ( unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
@@ -849,13 +849,13 @@ sub unrar_dir {
                 push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
                 dumper( "Undo prev sub_dir '$new_sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
                 do_cmds( $state, $dconf, $undo_cmds );
-                
+
                 # Empty stacks.
                 $undo_cmds = [];
                 $finish_cmds = [];
                 next;
             }
-            
+
             # Unrar failed and nothing to undo (too deeper).
             return 0;
         }
@@ -970,7 +970,7 @@ my $dirs_conf = load_config( $conf_fpath );
 
 # debug
 if ( 0 ) {
-    
+
     my $dconf = $dirs_conf->[0];
     my $base_dir = $dconf->{src_dir};
     my $sub_dir = 'subdir6/subdir5A-file';
@@ -978,8 +978,8 @@ if ( 0 ) {
     my $full_path = catdir( $base_dir, $sub_dir );
     my $dir_items = load_dir_content( $full_path );
     exit unless defined $dir_items;
-    
-    do_for_rar_file( 
+
+    do_for_rar_file(
         $dconf,
         [], # $finish_cmds
         $base_dir,
@@ -999,7 +999,7 @@ foreach my $dconf ( @$dirs_conf ) {
         print "Skipping configuration $dconf->{name} (!=$only_dconf_name).\n" if $ver >= 2;
         next;
     }
-    
+
     unless ( -d $dconf->{src_dir} ) {
         print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
         next;
@@ -1019,7 +1019,7 @@ foreach my $dconf ( @$dirs_conf ) {
             'done' => {},
         };
     }
-    
+
     # Special state changes.
     if ( 0 ) {
         # My own probably changes in stored data.
@@ -1030,9 +1030,14 @@ foreach my $dconf ( @$dirs_conf ) {
         }
 
         my $key_to_remove = undef;
-        if ( $key_to_remove && exists $state->{done}->{$key_to_remove} ) {
+        if ( $key_to_remove ) {
             dumper( 'old $state', $state );
-            delete $state->{done}->{$key_to_remove};
+            if ( exists $state->{done}->{$key_to_remove} ) {
+                delete $state->{done}->{$key_to_remove};
+            }
+            if ( exists $state->{info}->{$key_to_remove} ) {
+                delete $state->{info}->{$key_to_remove};
+            }
             dumper( 'new $state', $state );
             save_state( $state, $dconf );
         }
