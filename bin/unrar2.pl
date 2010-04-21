@@ -198,16 +198,12 @@ sub do_cmd_sub {
         }
 
         unless ( $done_ok ) {
-            if ( $ver >= 5 ) {
+            if ( $ver >= 1 ) {
                 print $msg;
                 print " Sleeping $sleep_time s ...\n";
             }
             $keypress_obj->sleep_and_process_keypress( $sleep_time );
-            my $max_sleep_time = 10*60; # max 10 minutes
-            if ( $sleep_time < $max_sleep_time ) {
-                $sleep_time = $sleep_time * $sleep_time;
-                $sleep_time = $max_sleep_time if $sleep_time > $max_sleep_time;
-            }
+            $sleep_time = $sleep_time * $sleep_time if $sleep_time < 60*60; # one hour
         }
     }
 
