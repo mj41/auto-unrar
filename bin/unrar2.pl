@@ -425,8 +425,13 @@ sub mkpath_copy_mtime {
 
 
 sub do_for_dir {
-    my ( $dconf, $finish_cmds, $base_dir, $sub_dir ) = @_;
+    my ( $dconf, $finish_cmds, $undo_cmds, $base_dir, $sub_dir ) = @_;
+
     push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $sub_dir ];
+
+    my $dest_path = catdir( $dconf->{dest_dir}, $sub_dir );
+    push @$undo_cmds, [ 'rm_empty_dir', $dest_path ];
+
     return 1;
 }
 
@@ -460,7 +465,7 @@ sub do_for_rar_file {
         $multipart_type = 'unsup';
     }
 
-    return ( 0, "File isn't rar archive", undef, undef ) unless $is_rar_archive;
+    return ( 0, "File isn't rar archive.", undef, undef ) unless $is_rar_archive;
 
     return ( 1, "File is part of multiparts archive, but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
 
@@ -807,7 +812,7 @@ sub unrar_dir {
             }
         }
 
-        do_for_dir( $dconf, $finish_cmds, $base_dir, $new_sub_dir, $name );
+        do_for_dir( $dconf, $finish_cmds, $undo_cmds, $base_dir, $new_sub_dir, $name );
 
         if ( $dconf->{recursive} ) {
 
@@ -817,7 +822,7 @@ sub unrar_dir {
                 if ( $deep < $dconf->{basedir_deep} ) {
 
                     if ( $dconf->{save_ok_info} ) {
-                        # Save state when error occured.
+                        # Save state when extracted ok.
                         my $base_info = {
                             ok => 1,
                             type => 'rar',
@@ -839,8 +844,8 @@ sub unrar_dir {
                     $undo_cmds = [];
                     $finish_cmds = [];
                 }
-                next;
-
+                
+                next; # Continue to next directory item.
             }
 
             # Unrar failed.
@@ -868,7 +873,7 @@ sub unrar_dir {
                 # Empty stacks.
                 $undo_cmds = [];
                 $finish_cmds = [];
-                next;
+                next; # Continue to next directory item.
             }
 
             # Unrar failed and nothing to undo (too deeper).
@@ -878,9 +883,12 @@ sub unrar_dir {
     } # end foreach dir
 
 
-    my $extrace_error_found = 0;
     my $files_done = {};
-    # find first parts or rars
+    my $extract_error = 0;
+
+    # Find first parts or rars.
+    # 0 .. to unrar (not processed), 1 .. unrared ok, -1 .. unrar error
+    my $parts_status = {}; 
     foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $state->{done}->{ $file_sub_path };
@@ -899,6 +907,10 @@ sub unrar_dir {
                 $dconf, $finish_cmds, $base_dir, $sub_dir, $name, $items
             );
 
+            unless ( exists $parts_status->{$name} ) {
+                $parts_status->{$name} = 0;
+            }
+
             print "$sub_dir, $name -- rar_rc $rar_rc\n" if $ver >= 8;
             if ( $ver >= 9 ) {
                 dumper( "files_extracted", $files_extracted ) if $files_extracted;
@@ -906,13 +918,18 @@ sub unrar_dir {
             }
             if ( $rar_rc != 0 ) {
                 # No first part of multipart archive.
-                next if $rar_rc == 1;
+                if ( $rar_rc == 1 ) {
+                    my $part_sub_path = catfile( $sub_dir, $name );
+                    $files_done->{ $part_sub_path } = 1;
+                    next;
+                }
 
                 # If error -> do not process these archives as normal files
                 # in next code.
                 foreach my $part ( @$rar_parts_list ) {
                     my $part_sub_path = catfile( $sub_dir, $part );
                     $files_done->{ $part_sub_path } = 1;
+                    $parts_status->{$part} = $extract_err ? -1 : 1;
                 }
 
                 # Add all extracted files to undo list.
@@ -924,6 +941,7 @@ sub unrar_dir {
                 }
 
                 if ( $extract_err ) {
+                    $extract_error = 1;
                     print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
                     if ( $deep >= $dconf->{basedir_deep} ) {
                         print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 1;
@@ -933,7 +951,7 @@ sub unrar_dir {
                     next;
 
                 } else {
-                    # remove rar archives from list
+                    # Remove rar archives from list.
                     foreach my $part ( @$rar_parts_list ) {
                         print "Archive part '$part' processed.\n" if $ver >= 5;
                         my $part_path = catfile( $sub_dir, $part );
@@ -947,9 +965,21 @@ sub unrar_dir {
             }
         }
     }
+    
+    dumper( '$parts_status', $parts_status ) if $ver >= 6;
+    my $not_processed_parts_found = 0;
+    foreach my $part ( keys %$parts_status ) {
+        if ( $parts_status->{$part} == 0 ) {
+            $not_processed_parts_found = 1;
+            print "Extraction error. Archive part '$part' found, but not processed.\n" if $ver >= 5;
+            last;
+        }
+    }
 
 
-    # no rar files
+
+    # No rar files.
+    # Use $files_done.
     foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $state->{done}->{ $file_sub_path };
@@ -980,6 +1010,8 @@ sub unrar_dir {
         }
     }
 
+    return 0 if $extract_error;
+    return 0 if $not_processed_parts_found;
     return 1;
 }
 
