@@ -1013,7 +1013,7 @@ sub unrar_dir {
                     $extract_error = 1;
                     print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
                     if ( $deep >= $dconf->{basedir_deep} ) {
-                        print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 1;
+                        print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 3;
                         return -3;
                     }
                     print "Continuing inside dir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;

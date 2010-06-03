@@ -1,0 +1,225 @@
+Configuration file ('../conf/unrar-data-conf.pl') content: 
+
+return [
+    {
+        name => 'data',
+        src_dir =>  catdir( $RealBin, '..', '..', 'auto-unrar-data', 'in'  ),
+        dest_dir => catdir( $RealBin, '..', '..', 'auto-unrar-data', 'out' ),
+        state_fpath =>  catfile( $RealBin, '..', '..', 'auto-unrar-data', 'unrar-data.db' ),
+        exclude_list => catfile( $RealBin, '..', '..', 'auto-unrar-data', 'unrar-data-rsync-exclude.txt' ), # --exclude-from=
+        minimum_free_space => '10000', # MB
+        basedir_deep => 1,
+        recursive => 1,
+        remove_done => 1,
+        move_non_rars => 1,
+        min_dir_mtime => 1, # 5*60, # seconds
+        save_ok_info => 1,
+        save_err_info => 1,
+    },
+];
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Diffs before (left side) and after (right side) 'perl auto-unrar.pl ../conf/unrar-data-conf.pl' run.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Diff of input directory ('../../auto-unrar-data/in') tree:
+
+../../auto-unrar-data/in                                           ../../auto-unrar-data/in
+|-- subdir01                                                    <
+|   |-- test1-file.txt                                          <
+|   |-- test1.rar                                               <
+|   |-- test1.txt                                               <
+|   |-- test2.rar                                               <
+|   `-- test2.txt                                               <
+|-- subdir02                                                    <
+|   |-- subdir2b                                                <
+|   |   |-- test3.rar                                           <
+|   |   |-- test3.txt                                           <
+|   |   |-- test4.rar                                           <
+|   |   `-- test4.txt                                           <
+|   |-- test5.txt                                               <
+|   |-- test5arch.part1.rar                                     <
+|   |-- test5arch.part2.rar                                     <
+|   |-- test5arch.part3.rar                                     <
+|   |-- test5arch.part4.rar                                     <
+|   `-- test5arch.part5.rar                                     <
+|-- subdir03                                                    <
+|   |-- test6-dir - spaces.rar                                  <
+|   |-- test7-dir.r00                                           <
+|   |-- test7-dir.r01                                           <
+|   |-- test7-dir.r02                                           <
+|   |-- test7-dir.r03                                           <
+|   |-- test7-dir.r04                                           <
+|   |-- test7-dir.r05                                           <
+|   |-- test7-dir.r06                                           <
+|   |-- test7-dir.r07                                           <
+|   |-- test7-dir.r08                                           <
+|   |-- test7-dir.r09                                           <
+|   |-- test7-dir.r10                                           <
+|   |-- test7-dir.r11                                           <
+|   |-- test7-dir.r12                                           <
+|   |-- test7-dir.r13                                           <
+|   |-- test7-dir.r14                                           <
+|   |-- test7-dir.r15                                           <
+|   |-- test7-dir.r16                                           <
+|   |-- test7-dir.r17                                           <
+|   |-- test7-dir.r18                                           <
+|   |-- test7-dir.r19                                           <
+|   |-- test7-dir.r20                                           <
+|   |-- test7-dir.r21                                           <
+|   |-- test7-dir.r22                                           <
+|   |-- test7-dir.r23                                           <
+|   |-- test7-dir.r24                                           <
+|   |-- test7-dir.r25                                           <
+|   |-- test7-dir.r26                                           <
+|   `-- test7-dir.rar                                           <
+|-- subdir04                                                       |-- subdir04
+|   |-- test8.txt                                                  |   |-- test8.txt
+|   |-- test9.part1.rar                                            |   |-- test9.part1.rar
+|   |-- test9.part2.rar                                            |   |-- test9.part2.rar
+|   |-- test9.part4.rar                                            |   |-- test9.part4.rar
+|   |-- test9.part5.rar                                            |   |-- test9.part5.rar
+|   `-- test9.part8.rar                                            |   `-- test9.part8.rar
+|-- subdir05                                                       |-- subdir05
+|   |-- subdir5A-file                                              |   |-- subdir5A-file
+|   |   `-- test10.txt                                             |   |   `-- test10.txt
+|   |-- subdir5B-rar_error                                         |   |-- subdir5B-rar_error
+|   |   |-- test11.part1.rar                                       |   |   |-- test11.part1.rar
+|   |   |-- test11.part3.rar                                       |   |   |-- test11.part3.rar
+|   |   `-- test11.part4.rar                                       |   |   `-- test11.part4.rar
+|   `-- test12.txt                                                 |   `-- test12.txt
+|-- subdir06                                                       |-- subdir06
+|   |-- subdir6A-rar_ok                                            |   |-- subdir6A-rar_ok
+|   |   |-- test13.txt                                             |   |   |-- test13.txt
+|   |   |-- test14.part1.rar                                       |   |   |-- test14.part1.rar
+|   |   |-- test14.part2.rar                                       |   |   |-- test14.part2.rar
+|   |   |-- test14.part3.rar                                       |   |   |-- test14.part3.rar
+|   |   |-- test14.part4.rar                                       |   |   |-- test14.part4.rar
+|   |   `-- test14.part5.rar                                       |   |   `-- test14.part5.rar
+|   |-- subdir6B-rar_error                                         |   |-- subdir6B-rar_error
+|   |   |-- test15.r00                                             |   |   |-- test15.r00
+|   |   |-- test15.r01                                             |   |   |-- test15.r01
+|   |   |-- test15.r03                                             |   |   |-- test15.r03
+|   |   `-- test15.rar                                             |   |   `-- test15.rar
+|   |-- subdir6C-empty                                             |   |-- subdir6C-empty
+|   `-- subdir6D-file                                              |   `-- subdir6D-file
+|       `-- test16.txt                                             |       `-- test16.txt
+|-- subdir07                                                    <
+|   |-- test17-file.001                                         <
+|   |-- test17-file.002                                         <
+|   |-- test17-file.003                                         <
+|   |-- test17-file.004                                         <
+|   |-- test17-file.005                                         <
+|   `-- test17-file.006                                         <
+|-- subdir08                                                       |-- subdir08
+|   |-- test18-file.part1.rar                                      |   |-- test18-file.part1.rar
+|   |-- test18-file.part2.rar                                      |   |-- test18-file.part2.rar
+|   |-- test18-file.part3.rar                                      |   |-- test18-file.part3.rar
+|   |-- test19-file.part1.rar                                      |   |-- test19-file.part1.rar
+|   |-- test19-file.part3.rar                                      |   |-- test19-file.part3.rar
+|   |-- test20-file.r00                                            |   |-- test20-file.r00
+|   |-- test20-file.r01                                            |   |-- test20-file.r01
+|   |-- test20-file.rar                                            |   |-- test20-file.rar
+|   |-- test21-file.r01                                            |   |-- test21-file.r01
+|   |-- test21-file.rar                                            |   |-- test21-file.rar
+|   |-- test22-file.001                                            |   |-- test22-file.001
+|   |-- test22-file.002                                            |   |-- test22-file.002
+|   |-- test22-file.003                                            |   |-- test22-file.003
+|   |-- test23-file.001                                            |   |-- test23-file.001
+|   `-- test23-file.003                                            |   `-- test23-file.003
+|-- subdir09                                                    |  `-- subdir09
+|   |-- test24-file.part3.rar                                   |      |-- test24-file.part3.rar
+|   |-- test24-file.part4.rar                                   |      |-- test24-file.part4.rar
+|   `-- test24-file.part6.rar                                   |      `-- test24-file.part6.rar
+|-- subdir10                                                    <
+|   |-- ssdA                                                    <
+|   |   |-- test26-no-rar.txt                                   <
+|   |   |-- test27-file.part1.rar                               <
+|   |   |-- test27-file.part2.rar                               <
+|   |   |-- test28-file.rar                                     <
+|   |   `-- test29-no-rar.txt                                   <
+|   |-- ssdB                                                    <
+|   |   |-- test30-file.rar                                     <
+|   |   |-- test31-no-rar.txt                                   <
+|   |   |-- test32-file.part1.rar                               <
+|   |   `-- test32-file.part2.rar                               <
+|   |-- ssdC                                                    <
+|   |   |-- test33-file.part1.rar                               <
+|   |   |-- test33-file.part2.rar                               <
+|   |   |-- test34-file.part1.rar                               <
+|   |   |-- test34-file.part2.rar                               <
+|   |   |-- test35-no-rar.txt                                   <
+|   |   `-- test36-no-rar.txt                                   <
+|   |-- test25.txt                                              <
+|   `-- test37-no-rar.txt                                       <
+`-- test0.txt                                                   <
+
+20 directories, 108 files                                       |  11 directories, 40 files
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Diff of output directory ('../../auto-unrar-data/out') tree:
+
+../../auto-unrar-data/out                                          ../../auto-unrar-data/out
+                                                                >  |-- subdir01
+                                                                >  |   |-- test1-file.txt
+                                                                >  |   |-- test1-file.txt.2
+                                                                >  |   |-- test1.txt
+                                                                >  |   |-- test2-file1.txt
+                                                                >  |   |-- test2-file2.txt
+                                                                >  |   |-- test2-file3.txt
+                                                                >  |   `-- test2.txt
+                                                                >  |-- subdir02
+                                                                >  |   |-- subdir2b
+                                                                >  |   |   |-- test3-dir
+                                                                >  |   |   |   `-- test3-file.txt
+                                                                >  |   |   |-- test3.txt
+                                                                >  |   |   |-- test4-dir1
+                                                                >  |   |   |   |-- test4-dir1-file1.txt
+                                                                >  |   |   |   `-- test4-dir1-file2.txt
+                                                                >  |   |   |-- test4-dir2
+                                                                >  |   |   |   |-- test4-dir2-file1.txt
+                                                                >  |   |   |   |-- test4-dir2-file2.txt
+                                                                >  |   |   |   `-- test4-dir2-file3.txt
+                                                                >  |   |   `-- test4.txt
+                                                                >  |   |-- test5.txt
+                                                                >  |   `-- test5arch.txt
+                                                                >  |-- subdir03
+                                                                >  |   |-- test6-dir - spaces
+                                                                >  |   |   `-- test6-file - spaces.txt
+                                                                >  |   `-- test7-dir
+                                                                >  |       `-- test7-file.txt
+                                                                >  |-- subdir07
+                                                                >  |   `-- test17-file.txt
+                                                                >  |-- subdir10
+                                                                >  |   |-- ssdA
+                                                                >  |   |   |-- test26-no-rar.txt
+                                                                >  |   |   |-- test27-file.txt
+                                                                >  |   |   |-- test28-file.txt
+                                                                >  |   |   `-- test29-no-rar.txt
+                                                                >  |   |-- ssdB
+                                                                >  |   |   |-- test30-file.txt
+                                                                >  |   |   |-- test31-no-rar.txt
+                                                                >  |   |   `-- test32-file.txt
+                                                                >  |   |-- ssdC
+                                                                >  |   |   |-- test33-file.txt
+                                                                >  |   |   |-- test34-file.txt
+                                                                >  |   |   |-- test35-no-rar.txt
+                                                                >  |   |   `-- test36-no-rar.txt
+                                                                >  |   |-- test25.txt
+                                                                >  |   `-- test37-no-rar.txt
+                                                                >  `-- test0.txt
+
+0 directories, 0 files                                          |  14 directories, 34 files
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Diff of rsync exclude list file ('../../auto-unrar-data/unrar-data-rsync-exclude.txt') content:
+
+                                                                >  - /subdir01
+                                                                >  - /subdir02
+                                                                >  - /subdir03
+                                                                >  - /subdir07
+                                                                >  - /subdir10
+                                                                >  - /test0.txt
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
