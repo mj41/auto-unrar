@@ -1193,6 +1193,8 @@ foreach my $dconf ( @$dirs_conf ) {
 
 }
 
+$keypress_obj->cleanup_before_exit();
+
 
 =head1 AUTHOR
 
