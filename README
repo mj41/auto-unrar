@@ -8,7 +8,9 @@ Features:
 ** .part1.rar, .part2.rar, ...
 ** .rar, .r00, .r01, ...
 ** .001, .002, ...
-* respect/dumplicate directory structure tree (basedir_deep configuration option)
+* duplicate directory structure tree 
+** respect basedir_deep configuration option
+** see http://bit.ly/9N2iSW ( docs/test-data/8-after-before-diff.txt )
 * move/rename normal files (no rar archives)
 * check minimum free space on device
 * can delete archives if extracted ok
