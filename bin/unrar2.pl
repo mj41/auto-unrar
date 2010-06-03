@@ -452,6 +452,12 @@ sub do_for_rar_file {
         $is_rar_archive = 1;
         # initial value, is set to '' unless other parts found
         $multipart_type = 'mr';
+
+    } elsif ( $file_name =~ /^(.*)\.(\d{3})$/ ) {
+        $base_name_part = $1;
+        $part_num = $2;
+        $is_rar_archive = 1;
+        $multipart_type = 'unsup';
     }
 
     return ( 0, "File isn't rar archive", undef, undef ) unless $is_rar_archive;
@@ -497,7 +503,12 @@ sub do_for_rar_file {
 
         } elsif ( $multipart_type eq 'mr' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.r(\d+)$/ ) {
-                $other_part_num = $1 + 2;
+                $other_part_num = $1 + 1;
+           }
+
+        } elsif ( $multipart_type eq 'unsup' ) {
+            if ( $next_file_name =~ /^\Q$base_name_part\E\.(\d+)$/ ) {
+                $other_part_num = $1;
             }
         }
 
@@ -888,7 +899,7 @@ sub unrar_dir {
                 $dconf, $finish_cmds, $base_dir, $sub_dir, $name, $items
             );
 
-            print "$sub_dir, $name -- rar_rc $rar_rc, $extract_err\n" if $ver >= 8;
+            print "$sub_dir, $name -- rar_rc $rar_rc\n" if $ver >= 8;
             if ( $ver >= 9 ) {
                 dumper( "files_extracted", $files_extracted );
                 dumper( "rar_parts_list", $rar_parts_list );
@@ -914,7 +925,11 @@ sub unrar_dir {
 
                 if ( $extract_err ) {
                     print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
-                    return 0;
+                    if ( $deep > $dconf->{basedir_deep} ) {
+                        print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 1;
+                        return 0;
+                    }
+                    next;
 
                 } else {
                     # remove rar archives from list
@@ -1014,6 +1029,13 @@ foreach my $dconf ( @$dirs_conf ) {
         next;
     }
 
+    # Check configuration.
+    if ( $dconf->{basedir_deep} <= 0 ) {
+        print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
+        next;
+    }
+
+
     my $state = undef;
     if ( -e $dconf->{state_fpath} ) {
         $state = retrieve( $dconf->{state_fpath} );
@@ -1033,6 +1055,12 @@ foreach my $dconf ( @$dirs_conf ) {
             next;
         }
 
+        # refresh exclude files
+        if ( 1 ) {
+            save_state( $state, $dconf );
+            next;
+        }
+
         my $key_to_remove = undef;
         if ( $key_to_remove ) {
             dumper( 'old $state', $state );
@@ -1045,6 +1073,7 @@ foreach my $dconf ( @$dirs_conf ) {
             dumper( 'new $state', $state );
             save_state( $state, $dconf );
         }
+
         next;
     }
 
