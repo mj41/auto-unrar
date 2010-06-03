@@ -503,7 +503,7 @@ sub do_for_rar_file {
 
         } elsif ( $multipart_type eq 'mr' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.r(\d+)$/ ) {
-                $other_part_num = $1 + 1;
+                $other_part_num = $1 + 2;
            }
 
         } elsif ( $multipart_type eq 'unsup' ) {
@@ -901,8 +901,8 @@ sub unrar_dir {
 
             print "$sub_dir, $name -- rar_rc $rar_rc\n" if $ver >= 8;
             if ( $ver >= 9 ) {
-                dumper( "files_extracted", $files_extracted );
-                dumper( "rar_parts_list", $rar_parts_list );
+                dumper( "files_extracted", $files_extracted ) if $files_extracted;
+                dumper( "rar_parts_list", $rar_parts_list ) if $rar_parts_list;
             }
             if ( $rar_rc != 0 ) {
                 # No first part of multipart archive.
