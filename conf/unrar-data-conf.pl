@@ -5,6 +5,7 @@ return [
         dest_dir => catdir( $RealBin, '..', '..', 'auto-unrar-data', 'out' ),
         state_fpath =>  catfile( $RealBin, '..', '..', 'auto-unrar-data', 'unrar-data.db' ),
         exclude_list => catfile( $RealBin, '..', '..', 'auto-unrar-data', 'unrar-data-rsync-exclude.txt' ), # --exclude-from=
+        minimum_free_space => '10000', # MB
         basedir_deep => 1,
         recursive => 1,
         remove_done => 1,

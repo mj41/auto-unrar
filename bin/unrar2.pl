@@ -1,21 +1,37 @@
-# ToDo
-# mtime pro adresare
-# check free space
-# unrar and duplicate names
-# unrar to temp directory - go back if error
-# * compare fname and fname.1 content, remove .1 if same
-# refactore, better configuration, help, ...
-# merge changes to Archive::Rar
-# password protected archives support
-# backup old version of state_fpath files, remove backup after normal end
-# unrar/test full paths of files in archive
-# refactor to Perl package
-# add archive parts count check
-# use do_cmd_sub inside do_cmds ?
-
-
 use strict;
 use warnings;
+
+
+=head1 NAME
+
+auto-unrar
+
+=head1 SYNOPSIS
+
+Smart extracting of RAR archives.
+
+=head1 DESCRIPTION
+
+Can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives while
+respect/dumplicate directory structure. 
+
+=head1 ToDo
+
+* mtime for directories
+* unrar and duplicate names
+** unrar to temp directory - go back if error
+** compare fname and fname.1 content, remove .1 if same
+* refactore, better configuration, help, ...
+* merge changes to Archive::Rar
+* password protected archives support
+* backup old version of state_fpath files, remove backup after normal end
+* unrar/test full paths of files in archive
+* refactor to Perl package
+* add archive parts count check
+* use do_cmd_sub inside do_cmds ?
+
+=cut 
+
 
 use Carp qw(carp croak verbose);
 use FindBin qw($RealBin);
@@ -27,6 +43,7 @@ use File::stat;
 use Storable;
 use Data::Dumper;
 use Digest::SHA1;
+use Filesys::DfPortable;
 
 use lib 'lib';
 use App::KeyPress;
@@ -62,7 +79,7 @@ HELP_END
 }
 
 unless ( -f $conf_fpath ) {
-    print "Can't find defined config file '$conf_fpath'\n";
+    print "Can't find defined config file '$conf_fpath'.\n";
     exit;
 }
 
@@ -76,6 +93,13 @@ my $keypress_obj = App::KeyPress->new(
     0 # $debug
 );
 
+=head1 METHODS
+
+=head2 my_croak
+
+Do clean up before croak with given message.
+
+=cut 
 
 sub my_croak {
     my ( $err_msg ) = @_;
@@ -758,18 +782,60 @@ sub do_cmds {
 }
 
 
+sub check_minimum_free_space {
+    my ( $dconf, $path ) = @_;
+
+    my $min_fs_MB = 100;
+    $min_fs_MB = $dconf->{'minimum_free_space'} if defined $dconf->{'minimum_free_space'};
+    
+    $path = $dconf->{dest_dir} unless defined $path;
+    
+    my $df_ref = dfportable( $path, 1024*1024 );
+    unless ( defined $df_ref ) {
+        print "ERROR: Can't determine free space on device for '$path'." if $ver >= 1;
+        return 0;
+    }
+
+    my $free_MB =  $df_ref->{bfree};
+    $free_MB = int( $free_MB + 0.5 );
+    if ( $free_MB < $min_fs_MB ) {
+        print "ERROR: There is not required amount of free space ($free_MB MB < $min_fs_MB MB) on device (path '$path').\n" if $ver >= 1;
+        return 0;
+    }
+
+    print "Free space on device ok ($free_MB MB >= $min_fs_MB MB).\n" if $ver >= 4;
+    return 1;
+}
+
+
+=head2 unrar_dir
+
+Return 
+* undef if extracted ok,
+* -2 on foreign error (e.g. can't list directory structure),
+* -3 on unrar error and
+* -4 on fatal foreign error (e.g. not free space).
+
+=cut 
 
 sub unrar_dir {
     my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
 
-    my $base_dir = $dconf->{'src_dir'};
+    return -4 unless check_minimum_free_space( $dconf );
+    
+    if ( 0 && $ver >= 5 && $sub_dir eq '/subdir10/ssdB' ) {
+        print "SIMULATED ERROR fro subdir '$sub_dir'.\n";
+        return -2;
+    }
+
+    my $base_dir = $dconf->{src_dir};
 
     my $dir_name = catdir( $base_dir, $sub_dir );
     print "Entering directory '$dir_name'\n" if $ver >= 3;
 
     my $items = load_dir_content( $dir_name );
-    return 0 unless defined $items;
-    return 1 unless scalar @$items;
+    return -2 unless defined $items;
+    return undef unless scalar @$items;
 
     $keypress_obj->process_keypress();
 
@@ -788,7 +854,7 @@ sub unrar_dir {
         if ( $deep + 1 == $dconf->{basedir_deep} ) {
             # Check change time.
             my $max_mtime = get_rec_dir_mtime( $path );
-            return 0 unless defined $max_mtime;
+            return -2 unless defined $max_mtime;
 
             print "Directory '$path' max mtime " . (localtime $max_mtime) . "\n" if $ver >= 4;
             if ( defined $dconf->{min_dir_mtime} ) {
@@ -817,7 +883,8 @@ sub unrar_dir {
         if ( $dconf->{recursive} ) {
 
             # Going deeper and deeper inside directory structure.
-            if ( unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1) ) {
+            my $ud_err_code = unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1);
+            unless ( defined $ud_err_code ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
                 if ( $deep < $dconf->{basedir_deep} ) {
 
@@ -873,11 +940,13 @@ sub unrar_dir {
                 # Empty stacks.
                 $undo_cmds = [];
                 $finish_cmds = [];
+                
+                return -4 if $ud_err_code == -4; # Fatal foreign error.
                 next; # Continue to next directory item.
             }
 
             # Unrar failed and nothing to undo (too deeper).
-            return 0;
+            return -3;
         }
 
     } # end foreach dir
@@ -945,7 +1014,7 @@ sub unrar_dir {
                     print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
                     if ( $deep >= $dconf->{basedir_deep} ) {
                         print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 1;
-                        return 0;
+                        return -3;
                     }
                     print "Continuing inside dir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;
                     next;
@@ -1010,9 +1079,9 @@ sub unrar_dir {
         }
     }
 
-    return 0 if $extract_error;
-    return 0 if $not_processed_parts_found;
-    return 1;
+    return -3 if $extract_error;
+    return -3 if $not_processed_parts_found;
+    return undef;
 }
 
 
@@ -1111,7 +1180,7 @@ foreach my $dconf ( @$dirs_conf ) {
     }
 
     dumper( 'dconf', $dconf ) if $ver >= 5;
-    unrar_dir(
+    my $ud_err_code = unrar_dir(
         $state,
         [], # $undo_cmds
         [], # $finish_cmds
@@ -1124,4 +1193,32 @@ foreach my $dconf ( @$dirs_conf ) {
 
 }
 
-$keypress_obj->cleanup_before_exit();
+
+=head1 AUTHOR
+
+Michal Jurosz <au@mj41.cz>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2009-2010 Michal Jurosz. All rights reserved.
+
+=head1 LICENSE 
+
+auto-unrar is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+auto-unrar is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <http://www.gnu.org/licenses/>. 
+
+=head1 BUGS
+
+L<http://github.com/mj41/auto-unrar/issues>
+
+=cut

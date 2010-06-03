@@ -1,4 +1,34 @@
-Install Perl. On Windows try http://strawberryperl.com/ .
+== bin/unrar2.pl ==
+
+Smart extracting of RAR archives.
+
+Features:
+* extract multipart archives
+* handle three multipart archives naming conventions
+** .part1.rar, .part2.rar, ...
+** .rar, .r00, .r01, ...
+** .001, .002, ...
+* respect/dumplicate directory structure tree
+* move/rename no normal files (no rar archives)
+* check minimum free space on device
+* can delete archives if extracted ok
+* save status to file, so already extracted archives aren't extracted again
+* keypress features during run ( p...pause, c...continue, q...quit )
+* good error handling
+** pause and try again
+** recovery from error
+** revert to initial state if error found during extraction inside directory
+* can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives
+** check if there is any change inside direcotory
+* rsync compatibility
+** can generate exclude list
+** check mtime recursively
+* preserve mtime of files and directories
+* has own test suite
+* tested on many big archives
+* debug and verbose support
+
+Tested on Linux only. Also see source ToDo list inside source code.
 
 == bin/unrar.pl ==
 
@@ -9,7 +39,5 @@ See content of 'extracted' and 'extracted-arch' and not extracted content inside
 
 Inside 'tests' you can see structure of what you can put to 'extract'.
 
+Install Perl. On Windows try http://strawberryperl.com/ .
 
-== bin/unrar2.pl ==
-
-Add you configuration to source code.
