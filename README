@@ -8,22 +8,25 @@ Features:
 ** .part1.rar, .part2.rar, ...
 ** .rar, .r00, .r01, ...
 ** .001, .002, ...
-* respect/dumplicate directory structure tree
-* move/rename no normal files (no rar archives)
+* respect/dumplicate directory structure tree (basedir_deep configuration option)
+* move/rename normal files (no rar archives)
 * check minimum free space on device
 * can delete archives if extracted ok
-* save status to file, so already extracted archives aren't extracted again
+* save status to file
+** so already extracted archives aren't extracted again
+** trying extract again only if some change found
 * keypress features during run ( p...pause, c...continue, q...quit )
 * good error handling
-** pause and try again
-** recovery from error
-** revert to initial state if error found during extraction inside directory
+** sleep (increment time to sleep) and try again
+** recovery from error (maintaining finished_ok and undo list)
+** revert to initial state if error found during extraction of directory
 * can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives
 ** check if there is any change inside direcotory
 * rsync compatibility
-** can generate exclude list
+** can generate exclude list (basedir_deep configuration option is used)
 ** check mtime recursively
-* preserve mtime of files and directories
+** respect minimum time since last change (let rsync finish his job)
+* preserve mtime of files and directories where possible
 * has own test suite
 * tested on many big archives
 * debug and verbose support
