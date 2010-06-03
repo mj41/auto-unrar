@@ -890,7 +890,7 @@ sub unrar_dir {
         if ( -f $path ) {
             #print "$space$name ($path) " if $ver >= 3;
 
-            if ( $name !~ /\.(r\d+|rar)$/ ) {
+            if ( $name !~ /\.(r\d+|rar|\d{3})$/ ) {
                 print "File '$name' isn't RAR archive.\n" if $ver >= 4;
                 next;
             }
@@ -925,10 +925,11 @@ sub unrar_dir {
 
                 if ( $extract_err ) {
                     print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
-                    if ( $deep > $dconf->{basedir_deep} ) {
+                    if ( $deep >= $dconf->{basedir_deep} ) {
                         print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 1;
                         return 0;
                     }
+                    print "Continuing inside dir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;
                     next;
 
                 } else {
