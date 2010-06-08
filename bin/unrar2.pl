@@ -477,14 +477,39 @@ sub do_for_rar_file {
     my $multipart_type = undef;
 
     if ( $file_name =~ /^(.*)\.part(\d+)\.rar$/ ) {
-        $base_name_part = $1;
-        $part_num = $2;
-        $is_rar_archive = 1;
-        $multipart_type = 'part';
+        my $tmp_base_name_part = $1;
+        my $tmp_part_num = $2;
+        
+        # See test/subdir11.
+        my $mr_type_found = 0;
+        NEXT_FILE: foreach my $next_file_name ( sort @$dir_items ) {
+            if ( $next_file_name =~ /^\Q${tmp_base_name_part}.part${tmp_part_num}\E\.r(\d+)$/ ) {
+                $mr_type_found = 1;
+                last;
+            }
+        }
+        
+        if ( not $mr_type_found ) {
+            $base_name_part = $tmp_base_name_part;
+            $part_num = $tmp_part_num;
+            $is_rar_archive = 1;
+            $multipart_type = 'part';
+        }
+    }
+    
+    if ( defined $multipart_type ) {
+        # Is 'part' type.
 
     } elsif ( $file_name =~ /^(.*)\.rar$/ ) {
         $base_name_part = $1;
         $part_num = 1;
+        $is_rar_archive = 1;
+        # initial value, is set to '' unless other parts found
+        $multipart_type = 'mr';
+
+    } elsif ( $file_name =~ /^(.*)\.r(\d+)$/ ) {
+        $base_name_part = $1;
+        $part_num = $2 + 2;
         $is_rar_archive = 1;
         # initial value, is set to '' unless other parts found
         $multipart_type = 'mr';
@@ -498,7 +523,7 @@ sub do_for_rar_file {
 
     return ( 0, "File isn't rar archive.", undef, undef ) unless $is_rar_archive;
 
-    return ( 1, "File is part of multiparts archive, but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
+    return ( 1, "File is part of multiparts archive (type $multipart_type), but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
 
     return -1 unless mkpath_copy_mtime( $dconf->{dest_dir}, $base_dir, $sub_dir );
 
@@ -530,8 +555,10 @@ sub do_for_rar_file {
 
     my $other_part_found = 0;
     NEXT_FILE: foreach my $next_file_name ( sort @$dir_items ) {
+        next NEXT_FILE if $file_name eq $next_file_name;
 
         my $other_part_num = undef;
+        
         if ( $multipart_type eq 'part' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.part(\d+)\.rar$/ ) {
                 $other_part_num = $1;
@@ -540,7 +567,7 @@ sub do_for_rar_file {
         } elsif ( $multipart_type eq 'mr' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.r(\d+)$/ ) {
                 $other_part_num = $1 + 2;
-           }
+            }
 
         } elsif ( $multipart_type eq 'unsup' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.(\d+)$/ ) {
@@ -1034,7 +1061,7 @@ sub unrar_dir {
                 $parts_status->{$name} = 0;
             }
 
-            print "subdir '$sub_dir', file '$name' -- rar_rc $rar_rc\n" if $ver >= 8;
+            print "Subdir '$sub_dir', file '$name' -- rar_rc $rar_rc\n" if $ver >= 8;
             if ( $ver >= 9 ) {
                 dumper( "files_extracted", $files_extracted ) if $files_extracted;
                 dumper( "rar_parts_list", $rar_parts_list ) if $rar_parts_list;
@@ -1042,6 +1069,7 @@ sub unrar_dir {
             if ( $rar_rc != 0 ) {
                 # No first part of multipart archive.
                 if ( $rar_rc == 1 ) {
+                    print "$extract_err\n" if $ver >= 6;
                     my $part_sub_path = catfile( $sub_dir, $name );
                     $files_done->{ $part_sub_path } = 1;
                     next;

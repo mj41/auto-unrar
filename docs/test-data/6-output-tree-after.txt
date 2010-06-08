@@ -46,6 +46,9 @@
 |   |   `-- test36-no-rar.txt
 |   |-- test25.txt
 |   `-- test37-no-rar.txt
+|-- subdir11
+|   |-- test38-file.part001.txt
+|   `-- test38-file.part002.txt
 `-- test0.txt
 
-14 directories, 34 files
+15 directories, 36 files

@@ -126,6 +126,11 @@
 |   |   `-- test36-no-rar.txt
 |   |-- test25.txt
 |   `-- test37-no-rar.txt
+|-- subdir11
+|   |-- test38-file.part001.r00
+|   |-- test38-file.part001.rar
+|   |-- test38-file.part002.part1.rar
+|   `-- test38-file.part002.part2.rar
 `-- test0.txt
 
-20 directories, 108 files
+21 directories, 112 files
