@@ -223,7 +223,6 @@ Diff of output directory ('../../auto-unrar-data/out') tree:
 ---------------------------------------------------------------------------------------------------------
 Diff of rsync exclude list file ('../../auto-unrar-data/unrar-data-rsync-exclude.txt') content:
 
-                                                                >  - 
                                                                 >  - /subdir01
                                                                 >  - /subdir02
                                                                 >  - /subdir03

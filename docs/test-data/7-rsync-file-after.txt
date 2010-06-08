@@ -1,4 +1,3 @@
-- 
 - /subdir01
 - /subdir02
 - /subdir03

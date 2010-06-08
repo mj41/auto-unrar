@@ -333,7 +333,7 @@ sub save_item_rec_content_info {
 sub save_item_done {
     my ( $state, $dconf, $item_name ) = @_;
 
-    if ( defined $item_name ) {
+    if ( defined $item_name && $item_name ) {
         $state->{done}->{$item_name} = time();
     }
     
@@ -922,7 +922,9 @@ sub process_unrar_dir_ok {
     }
 
     # Add this to done list.
-    push @$finish_cmds, [ 'save_done', $sub_dir ];
+    if ( $sub_dir ) {
+        push @$finish_cmds, [ 'save_done', $sub_dir ];
+    }
 
     # Finish command.
     if ( scalar @$finish_cmds ) {
@@ -1140,7 +1142,7 @@ sub unrar_dir {
 
                 # Add all extracted files to undo list.
                 foreach my $ext ( @$files_extracted ) {
-                    print "Extracted archive '$ext' processed.\n" if $ver >= 5;
+                    print "Extracted file '$ext' processed.\n" if $ver >= 5;
                     my $ext_path = catfile( $dconf->{dest_dir}, $sub_dir, $ext );
                     next unless -e $ext_path;
                     push @$undo_cmds, [ 'unlink', $ext_path ];
@@ -1315,9 +1317,9 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
     if ( 0 ) {
         # Upgrade format.
         if ( 0 ) {
-            delete $state->{err};
+            delete $state->{err} if exists $state->{err};
+            delete $state->{done}->{''} if exists $state->{done}->{''};
             save_state( $state, $dconf );
-            next;
         }
 
         # Export to other format.
