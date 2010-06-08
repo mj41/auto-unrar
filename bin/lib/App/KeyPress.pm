@@ -24,11 +24,16 @@ sub new {
 
     my $hooks = {};
     $hooks->{before_exit} = sub {};
+    $hooks->{quit_pressed} = sub {};
     $hooks->{pause_begin} = sub {};
     $hooks->{pause_refresh} = sub {};
     $hooks->{pause_refresh_rate} = 60*60;
     $hooks->{pause_end} = sub {};
     $self->{hooks} = $hooks;
+
+    # Only process cleanup_before_exit (before_exit) and return. Do not call 'exit'.
+    $self->{return_on_exit} = 0;
+    $self->{exit_keypressed} = 0;
 
     return $self;
 }
@@ -37,6 +42,18 @@ sub new {
 sub set_before_exit_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{before_exit} = $sub_ref;
+}
+
+
+sub set_quit_pressed_sub {
+    my ( $self, $sub_ref ) = @_;
+    $self->{hooks}->{quit_pressed} = $sub_ref;
+}
+
+
+sub set_return_on_exit {
+    my ( $self, $return_on_exit ) = @_;
+    $self->{return_on_exit} = $return_on_exit;
 }
 
 
@@ -67,8 +84,22 @@ sub set_pause_end_sub {
 
 sub cleanup_before_exit {
     my ( $self ) = @_;
-    $self->{hooks}->{before_exit}->();
+    $self->{exit_keypressed} = 1;
     Term::ReadKey::ReadMode('normal');
+    $self->{hooks}->{before_exit}->();
+    return 1;
+}
+
+
+sub get_exit_keypressed {
+    my ( $self ) = @_;
+    return $self->{exit_keypressed};
+}
+
+
+sub reset_exit_keypressed {
+    my ( $self ) = @_;
+    $self->{exit_keypressed} = 0;
     return 1;
 }
 
@@ -87,6 +118,9 @@ sub last_pressed_key() {
 
 sub process_keypress() {
     my ( $self, $start_time ) = @_;
+    
+    return 1 if $self->{exit_keypressed};
+    
     $start_time = time() unless defined $start_time;
 
     my $report_time = $start_time;
@@ -107,8 +141,10 @@ sub process_keypress() {
                 $paused = 0;
 
             } elsif ( $char eq 'Q' || $char eq 'E' ) {
+                $self->{hooks}->{quit_pressed}->();
                 print "User press exit key.\n" if $ver > 2;
                 $self->cleanup_before_exit();
+                return 1 if $self->{return_on_exit};
                 exit;
 
             } else {

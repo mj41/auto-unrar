@@ -92,6 +92,13 @@ my $keypress_obj = App::KeyPress->new(
     $ver,
     0 # $debug
 );
+$keypress_obj->set_quit_pressed_sub(
+    sub {
+        print "Quit keypressed.\n" if $ver >= 2;
+    }
+);
+$keypress_obj->set_return_on_exit( 1 );
+
 
 =head1 METHODS
 
@@ -454,7 +461,7 @@ sub do_for_dir {
     push @$finish_cmds, [ 'mkpath_copy_mtime', $dconf->{dest_dir}, $base_dir, $sub_dir ];
 
     my $dest_path = catdir( $dconf->{dest_dir}, $sub_dir );
-    push @$undo_cmds, [ 'rm_empty_dir', $dest_path ];
+    push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
 
     return 1;
 }
@@ -573,8 +580,13 @@ sub do_for_rar_file {
     } # foreach end
     $multipart_type = '' unless $other_part_found;
 
+    if ( $ver >= 2 ) {
+        my $num_of_parts = scalar @rar_parts_list;
+        print "Extracting file '$file_name'";
+        print " (first of $num_of_parts parts)" if $num_of_parts > 1;
+        print ".\n";
+    }
     print "File '$file_name' - base_name_part '$base_name_part', is_rar_archive $is_rar_archive, part_num $part_num, multipart_type '$multipart_type'\n" if $ver >= 5;
-
 
     my $res = $rar_obj->Extract(
         '-donotoverwrite' => 1,
@@ -708,6 +720,11 @@ sub do_cmds {
     foreach my $cmd_conf ( @$finish_cmds ) {
         my $cmd = shift @$cmd_conf;
 
+        if ( $ver >= 2 && not defined $cmd ) {
+            dumper( 'do_cmds error', $finish_cmds, 1 );
+            next;
+        }
+
         # unlink
         if ( $cmd eq 'unlink' ) {
             my $full_part_path = shift @$cmd_conf;
@@ -808,18 +825,90 @@ sub check_minimum_free_space {
 }
 
 
+sub process_unrar_dir_ok {
+    my ( 
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+        $ud_err_code, $base_dir
+    ) = @_;
+
+    return 1 if $deep >= $dconf->{basedir_deep};
+
+    if ( $dconf->{save_ok_info} ) {
+        # Save state when extracted ok.
+        my $base_info = {
+            ok => 1,
+            type => 'rar',
+        };
+        my $save_full_info = 1;
+        save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
+    }
+
+    # Add this to done list.
+    push @$finish_cmds, [ 'save_done', $sub_dir ];
+
+    # Finish command.
+    if ( scalar @$finish_cmds ) {
+        dumper( "Finishing prev sub_dir '$sub_dir', deep $deep", $finish_cmds, 1 ) if $ver >= 5;
+        do_cmds( $state, $dconf, $finish_cmds );
+    }
+
+    # Empty stacks.
+    @$undo_cmds = ();
+    @$finish_cmds = ();
+    
+    return 1;
+}
+
+
+sub process_unrar_dir_err { 
+    my (
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+        $ud_err_code, $base_dir
+    ) = @_;
+            
+    return 1 if $deep >= $dconf->{basedir_deep};
+
+    # Save state when error occured.
+    my $base_info = {
+        error => 1,
+        error_info => {
+            # log => $dir_log,
+            type => 'rar',
+        },
+    };
+    my $save_full_info = ( $dconf->{save_err_info} );
+    save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
+    # dumper( '$state', $state ); # debug
+
+    # Undo command.
+    @$undo_cmds = reverse @$undo_cmds;
+    dumper( "Undo cmds (reversed)", $undo_cmds, 1 ) if $ver >= 5;
+    do_cmds( $state, $dconf, $undo_cmds );
+
+    # Empty stacks.
+    @$undo_cmds = ();
+    @$finish_cmds = ();
+
+    return 1;
+}
+
+
 =head2 unrar_dir
 
 Return 
 * undef if extracted ok,
 * -2 on foreign error (e.g. can't list directory structure),
 * -3 on unrar error and
-* -4 on fatal foreign error (e.g. not free space).
+* -4 on fatal foreign error (e.g. not free space),
+* -5 quit keypress.
 
 =cut 
 
 sub unrar_dir {
     my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
+
+    $keypress_obj->process_keypress();
+    return -5 if $keypress_obj->get_exit_keypressed();
 
     return -4 unless check_minimum_free_space( $dconf );
     
@@ -837,12 +926,12 @@ sub unrar_dir {
     return -2 unless defined $items;
     return undef unless scalar @$items;
 
-    $keypress_obj->process_keypress();
-
     my $space = '  ' x $deep;
+
 
     # dirs
     foreach my $name ( sort @$items ) {
+        
         my $new_sub_dir = catdir( $sub_dir, $name );
         next if exists $state->{done}->{ $new_sub_dir };
 
@@ -884,69 +973,34 @@ sub unrar_dir {
 
             # Going deeper and deeper inside directory structure.
             my $ud_err_code = unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1);
+            
+            # Unrar ok.
             unless ( defined $ud_err_code ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
-                if ( $deep < $dconf->{basedir_deep} ) {
 
-                    if ( $dconf->{save_ok_info} ) {
-                        # Save state when extracted ok.
-                        my $base_info = {
-                            ok => 1,
-                            type => 'rar',
-                        };
-                        my $save_full_info = 1;
-                        save_item_rec_content_info( $state, $dconf, $base_dir, $new_sub_dir, $base_info, $save_full_info );
-                    }
-
-                    # Add this to done list.
-                    push @$finish_cmds, [ 'save_done', $new_sub_dir ];
-
-                    # Finish command.
-                    if ( scalar @$finish_cmds ) {
-                        dumper( "Finishing prev sub_dir '$new_sub_dir', deep $deep", $finish_cmds ) if $ver >= 5;
-                        do_cmds( $state, $dconf, $finish_cmds );
-                    }
-
-                    # Empty stacks.
-                    $undo_cmds = [];
-                    $finish_cmds = [];
-                }
+                process_unrar_dir_ok( 
+                    $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
+                    $ud_err_code, $base_dir
+                );
                 
                 next; # Continue to next directory item.
             }
 
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed.\n" if $ver >= 5;
+            
+            process_unrar_dir_err(
+                $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
+                $ud_err_code, $base_dir
+            );
+
             if ( $deep < $dconf->{basedir_deep} ) {
-
-                # Save state when error occured.
-                my $base_info = {
-                    error => 1,
-                    error_info => {
-                        # log => $dir_log,
-                        type => 'rar',
-                    },
-                };
-                my $save_full_info = ( $dconf->{save_err_info} );
-                save_item_rec_content_info( $state, $dconf, $base_dir, $new_sub_dir, $base_info, $save_full_info );
-                # dumper( '$state', $state ); # debug
-
-                # Undo command.
-                my $dest_path = catdir( $dconf->{dest_dir}, $new_sub_dir );
-                push @$undo_cmds, [ 'rm_rec_empty_dir', $dest_path ];
-                dumper( "Undo prev sub_dir '$new_sub_dir', deep $deep", $undo_cmds ) if $ver >= 5;
-                do_cmds( $state, $dconf, $undo_cmds );
-
-                # Empty stacks.
-                $undo_cmds = [];
-                $finish_cmds = [];
-                
-                return -4 if $ud_err_code == -4; # Fatal foreign error.
+                return $ud_err_code if $ud_err_code <= -4; # Too fatal.
                 next; # Continue to next directory item.
             }
 
-            # Unrar failed and nothing to undo (too deeper).
-            return -3;
+            # Unrar failed and nothing to undo (too deep).
+            return $ud_err_code;
         }
 
     } # end foreach dir
@@ -980,7 +1034,7 @@ sub unrar_dir {
                 $parts_status->{$name} = 0;
             }
 
-            print "$sub_dir, $name -- rar_rc $rar_rc\n" if $ver >= 8;
+            print "subdir '$sub_dir', file '$name' -- rar_rc $rar_rc\n" if $ver >= 8;
             if ( $ver >= 9 ) {
                 dumper( "files_extracted", $files_extracted ) if $files_extracted;
                 dumper( "rar_parts_list", $rar_parts_list ) if $rar_parts_list;
@@ -992,6 +1046,8 @@ sub unrar_dir {
                     $files_done->{ $part_sub_path } = 1;
                     next;
                 }
+                
+                # Is first part -> was extracted.
 
                 # If error -> do not process these archives as normal files
                 # in next code.
@@ -1009,28 +1065,37 @@ sub unrar_dir {
                     push @$undo_cmds, [ 'unlink', $ext_path ];
                 }
 
+                # Extract error.
                 if ( $extract_err ) {
                     $extract_error = 1;
-                    print "Rar archive extractiong error: $extract_err\n" if $ver >= 1;
+                    print "Rar archive extractiong error: $extract_err.\n" if $ver >= 2;
                     if ( $deep >= $dconf->{basedir_deep} ) {
                         print "Leaving dir '$sub_dir' ($deep, $dconf->{basedir_deep}).\n" if $ver >= 3;
                         return -3;
                     }
-                    print "Continuing inside dir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;
+                    print "Continuing inside subdir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;
+
+                    $keypress_obj->process_keypress();
+                    return -5 if $keypress_obj->get_exit_keypressed();
                     next;
 
-                } else {
-                    # Remove rar archives from list.
-                    foreach my $part ( @$rar_parts_list ) {
-                        print "Archive part '$part' processed.\n" if $ver >= 5;
-                        my $part_path = catfile( $sub_dir, $part );
-                        push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{basedir_deep};
-                        if ( $dconf->{remove_done} ) {
-                            my $full_part_path = catdir( $dir_name, $part );
-                            push @$finish_cmds, [ 'unlink', $full_part_path ];
-                        }
+                }
+
+                # Extracted ok.
+                # Remove rar archives from list.
+                foreach my $part ( @$rar_parts_list ) {
+                    print "Archive part '$part' processed.\n" if $ver >= 5;
+                    my $part_path = catfile( $sub_dir, $part );
+                    push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{basedir_deep};
+                    if ( $dconf->{remove_done} ) {
+                        my $full_part_path = catdir( $dir_name, $part );
+                        push @$finish_cmds, [ 'unlink', $full_part_path ];
                     }
                 }
+
+                $keypress_obj->process_keypress();
+                return -5 if $keypress_obj->get_exit_keypressed();
+
             }
         }
     }
@@ -1075,7 +1140,7 @@ sub unrar_dir {
         if ( scalar @$finish_cmds ) {
             dumper( "finishing prev sub_dir '$sub_dir'", $finish_cmds ) if $ver >= 5;
             do_cmds( $state, $dconf, $finish_cmds );
-            $finish_cmds = [];
+            @$finish_cmds = ();
         }
     }
 
@@ -1083,6 +1148,38 @@ sub unrar_dir {
     return -3 if $not_processed_parts_found;
     return undef;
 }
+
+
+sub unrar_dir_start {
+    my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
+
+    my $ud_err_code = unrar_dir(
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep
+    );
+
+    my $base_dir = $dconf->{src_dir};
+ 
+     # Unrar ok.
+    unless ( defined $ud_err_code ) {
+        dumper( 'Last $finish_cmds', $finish_cmds ) if $ver >= 4;
+        process_unrar_dir_ok( 
+            $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+            $ud_err_code, $base_dir
+        );
+        
+       return undef;
+    }
+
+    # Unrar failed.
+    dumper( 'Last $undo_cmds', $undo_cmds ) if $ver >= 4;
+    process_unrar_dir_err( 
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+        $ud_err_code, $base_dir
+    );
+
+    return $ud_err_code;
+}
+
 
 
 my $dirs_conf = load_config( $conf_fpath );
@@ -1113,7 +1210,9 @@ if ( 0 ) {
 }
 
 
-foreach my $dconf ( @$dirs_conf ) {
+my $last_dconf_num = $#$dirs_conf;
+foreach my $dconf_num ( 0..$last_dconf_num ) {
+    my $dconf = $dirs_conf->[ $dconf_num ];
 
     # skip if only one selected
     if ( defined $only_dconf_name && $dconf->{name} ne $only_dconf_name ) {
@@ -1180,7 +1279,7 @@ foreach my $dconf ( @$dirs_conf ) {
     }
 
     dumper( 'dconf', $dconf ) if $ver >= 5;
-    my $ud_err_code = unrar_dir(
+    my $ud_err_code = unrar_dir_start(
         $state,
         [], # $undo_cmds
         [], # $finish_cmds
@@ -1188,6 +1287,12 @@ foreach my $dconf ( @$dirs_conf ) {
         '', # $sub_dir
         0  # $deep
     );
+    if ( defined($ud_err_code) && $ud_err_code == -5 ) {
+        if ( $dconf_num < $last_dconf_num ) {
+            print "Keypress for Quit - skipping next configuration options.\n" if $ver >= 2;
+        }
+        last;
+    }
 
     dumper( "state for '$dconf->{name}':", $state ) if $ver >= 5;
 
