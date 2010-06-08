@@ -346,7 +346,7 @@ sub save_item_done {
 
     } elsif ( $state_store_type eq 'perl' ) {
         my $dumper_obj = Data::Dumper->new( [ $state ], [ 'state' ] );
-        $dumper_obj->Purity(1)->Terse(1)->Deepcopy(1);
+        $dumper_obj->Purity(1)->Terse(1)->Deepcopy(1)->Sortkeys(1);
         my $state_dump_code = $dumper_obj->Dump;
 
         do_cmd_sub(
@@ -1315,6 +1315,11 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
     # ToDo
     # Special state changes.
     if ( 0 ) {
+        # Refresh exclude files.
+        if ( 0 ) {
+            save_state( $state, $dconf );
+        }
+
         # Upgrade format.
         if ( 0 ) {
             delete $state->{err} if exists $state->{err};
@@ -1331,11 +1336,6 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
                 $dconf->{state_store_type} = 'perl';
                 $dconf->{state_fpath} =~ s{\.db$}{\.pl};
             }
-            save_state( $state, $dconf );
-        }
-
-        # Refresh exclude files.
-        if ( 0 ) {
             save_state( $state, $dconf );
         }
         
