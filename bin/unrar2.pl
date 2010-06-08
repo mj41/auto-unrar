@@ -45,7 +45,7 @@ use Data::Dumper;
 use Digest::SHA1;
 use Filesys::DfPortable;
 
-use lib 'lib';
+use lib "$RealBin/lib";
 use App::KeyPress;
 use Archive::Rar;
 
@@ -222,6 +222,8 @@ sub do_cmd_sub {
     my $sleep_time = 1;
     while ( not $done_ok ) {
         my $ret_val = $cmd_sub->();
+        
+        $out_data = undef;
         if ( ref $ret_val ) {
             ( $done_ok, $out_data ) = @$ret_val;
         } else {
@@ -231,6 +233,7 @@ sub do_cmd_sub {
         unless ( $done_ok ) {
             if ( $ver >= 5 ) {
                 print $msg;
+                print $out_data if defined $out_data;
                 print " Sleeping $sleep_time s ...\n";
             }
             $keypress_obj->sleep_and_process_keypress( $sleep_time );
@@ -333,11 +336,34 @@ sub save_item_done {
     if ( defined $item_name ) {
         $state->{done}->{$item_name} = time();
     }
+    
+    my $state_store_type = $dconf->{state_store_type};
+    if ( $state_store_type eq 'storable' ) {
+        do_cmd_sub(
+            sub { store( $state, $dconf->{state_fpath} ); },
+            "Saving state to '$dconf->{state_fpath}' failed  (type=$state_store_type)."
+        );
 
-    do_cmd_sub(
-        sub { store( $state, $dconf->{state_fpath} ); },
-        "Store done list to '$dconf->{state_fpath}' failed."
-    );
+    } elsif ( $state_store_type eq 'perl' ) {
+        my $dumper_obj = Data::Dumper->new( [ $state ], [ 'state' ] );
+        $dumper_obj->Purity(1)->Terse(1)->Deepcopy(1);
+        my $state_dump_code = $dumper_obj->Dump;
+
+        do_cmd_sub(
+            sub { 
+                my $fh;
+                open( $fh, '>', $dconf->{state_fpath} ) or return ( 0, $! );
+                print $fh $state_dump_code;
+                close $fh or return ( 0, $! );
+            },
+            "Saving state to '$dconf->{state_fpath}' failed (type=$state_store_type)."
+        );
+
+    } else {
+        print "Unknown state_store_type '$state_store_type'.\n" if $ver >= 2;
+        return 0;
+    }
+
     if ( defined $item_name ) {
         print "Item '$item_name' saved to state_fpath.\n" if $ver >= 5;
     } else {
@@ -371,6 +397,31 @@ sub save_item_done {
 sub save_state {
     my ( $state, $dconf ) = @_;
     return save_item_done( $state, $dconf, undef );
+}
+
+
+sub load_state {
+    my ( $dconf ) = @_;
+
+    my $state_store_type = 'storable';
+    if ( $dconf->{state_fpath} =~ /\.pl$/ ) {
+        $state_store_type = 'perl';
+    }
+    $dconf->{state_store_type} = $state_store_type;
+    
+    unless ( -e $dconf->{state_fpath} ) {
+        return {
+            'done' => {},
+        };
+    }
+
+    my $state = undef;
+    if ( $dconf->{state_store_type} eq 'storable' ) {
+        $state = retrieve( $dconf->{state_fpath} );
+    } else {
+        $state = do $dconf->{state_fpath};
+    }
+    return $state;
 }
 
 
@@ -901,8 +952,10 @@ sub process_unrar_dir_err {
         error_info => {
             # log => $dir_log,
             type => 'rar',
+            err_code => $ud_err_code,
         },
     };
+    dumper( 'Inserting new error info', $base_info ) if $ver >= 5;
     my $save_full_info = ( $dconf->{save_err_info} );
     save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
     # dumper( '$state', $state ); # debug
@@ -1248,6 +1301,81 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
         next;
     }
 
+    # Check configuration.
+    if ( $dconf->{basedir_deep} <= 0 ) {
+        print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
+        next;
+    }
+
+    my $state = load_state( $dconf );
+
+
+    # ToDo
+    # Special state changes.
+    if ( 0 ) {
+        # Upgrade format.
+        if ( 0 ) {
+            delete $state->{err};
+            save_state( $state, $dconf );
+            next;
+        }
+
+        # Export to other format.
+        if ( 0 ) {
+            if ( $dconf->{state_store_type} eq 'perl' ) {
+                $dconf->{state_store_type} = 'storable';
+                $dconf->{state_fpath} =~ s{\.pl$}{\.db};
+            } else {
+                $dconf->{state_store_type} = 'perl';
+                $dconf->{state_fpath} =~ s{\.db$}{\.pl};
+            }
+            save_state( $state, $dconf );
+        }
+
+        # Refresh exclude files.
+        if ( 0 ) {
+            save_state( $state, $dconf );
+        }
+        
+        # Clean up 'info' part.
+        if ( 0 ) {
+            foreach my $name ( keys %{$state->{done}} ) {
+                if ( exists $state->{info}->{ $name } ) {
+                    delete $state->{info}->{ $name };
+                }
+            }
+            save_state( $state, $dconf );
+        }
+
+        # Remove up 'info' part.
+        if ( 0 ) {
+            delete $state->{info};
+            save_state( $state, $dconf );
+        }
+
+        # Remove some file from done and info parts.
+        my $key_to_remove = undef;
+        if ( $key_to_remove ) {
+            dumper( 'old $state', $state ) if $ver >= 6;
+            if ( exists $state->{done}->{$key_to_remove} ) {
+                delete $state->{done}->{$key_to_remove};
+            }
+            if ( exists $state->{info}->{$key_to_remove} ) {
+                delete $state->{info}->{$key_to_remove};
+            }
+            dumper( 'new $state', $state ) if $ver >= 6;
+            save_state( $state, $dconf );
+        }
+
+        # Dump state.
+        if ( 1 ) {
+            dumper( '$state', $state );
+        }
+
+        next;
+    }
+
+
     unless ( -d $dconf->{src_dir} ) {
         print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
         next;
@@ -1257,55 +1385,7 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
         print "Output directory '$dconf->{dest_dir}' doesn't exists.\n" if $ver >= 1;
         next;
     }
-
-    # Check configuration.
-    if ( $dconf->{basedir_deep} <= 0 ) {
-        print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
-        next;
-    }
-
-
-    my $state = undef;
-    if ( -e $dconf->{state_fpath} ) {
-        $state = retrieve( $dconf->{state_fpath} );
-
-    } else {
-        $state = {
-            'done' => {},
-        };
-    }
-
-    # Special state changes.
-    if ( 0 ) {
-        # My own probably changes in stored data.
-        if ( 0 ) {
-            delete $state->{err};
-            save_state( $state, $dconf );
-            next;
-        }
-
-        # refresh exclude files
-        if ( 1 ) {
-            save_state( $state, $dconf );
-            next;
-        }
-
-        my $key_to_remove = undef;
-        if ( $key_to_remove ) {
-            dumper( 'old $state', $state );
-            if ( exists $state->{done}->{$key_to_remove} ) {
-                delete $state->{done}->{$key_to_remove};
-            }
-            if ( exists $state->{info}->{$key_to_remove} ) {
-                delete $state->{info}->{$key_to_remove};
-            }
-            dumper( 'new $state', $state );
-            save_state( $state, $dconf );
-        }
-
-        next;
-    }
-
+    
     dumper( 'dconf', $dconf ) if $ver >= 5;
     my $ud_err_code = unrar_dir_start(
         $state,
@@ -1315,7 +1395,16 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
         '', # $sub_dir
         0  # $deep
     );
-    if ( defined($ud_err_code) && $ud_err_code == -5 ) {
+
+    # Clean up 'info' part.
+    foreach my $if_name ( keys %{$state->{done}} ) {
+        if ( exists $state->{info}->{ $if_name } ) {
+            delete $state->{info}->{ $if_name };
+        }
+    }
+    save_state( $state, $dconf );
+
+    if ( $keypress_obj->get_exit_keypressed() ) {
         if ( $dconf_num < $last_dconf_num ) {
             print "Keypress for Quit - skipping next configuration options.\n" if $ver >= 2;
         }
