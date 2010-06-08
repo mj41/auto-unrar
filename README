@@ -1,10 +1,12 @@
-== bin/unrar2.pl ==
+Smart Perl scripts (for Linux and Windows) to auto unrar/extract a directory structure containing many RAR archives.
 
-Smart extracting of RAR archives.
+== bin/unrar2.pl (for Linux) ==
+
+Smart extracting of many RAR archives for Linux.
 
 Features:
 * extract multipart archives
-* handle three multipart archives naming conventions
+* handle all three multipart archives naming conventions
 ** .part1.rar, .part2.rar, ...
 ** .rar, .r00, .r01, ...
 ** .001, .002, ...
@@ -18,31 +20,66 @@ Features:
 ** so already extracted archives aren't extracted again
 ** trying extract again only if some change found
 * keypress features during run ( p...pause, c...continue, q...quit )
-* good error handling
+* smart error handling 
+** maintain undo actions list for recovery to initial state
 ** sleep (increment time to sleep) and try again
-** recovery from error (maintaining finished_ok and undo list)
 ** revert to initial state if error found during extraction of directory
 * can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives
 ** check if there is any change inside direcotory
-* rsync compatibility
-** can generate exclude list (basedir_deep configuration option is used)
-** check mtime recursively
+* support for rsync integration
+** generate rsync exclude list (basedir_deep configuration option is used)
+** check time of last modification of base directories (recursively)
 ** respect minimum time since last change (let rsync finish his job)
 * preserve mtime of files and directories where possible
 * has own test suite
 * tested on many big archives
 * debug and verbose support
 
-Tested on Linux only. Also see source ToDo list inside source code.
+Tested on Linux only. Also see ToDo list inside source code 
+http://github.com/mj41/auto-unrar/blob/master/bin/unrar2.pl .
 
-== bin/unrar.pl ==
+
+== bin/unrar.pl (for Windows) ==
+
+Smart extracting of RAR archives for Windows with password recovery.
 
 Create directories 'extract', 'extracted' and 'extracted-arch' inside 'auto-unrar' directory.
 Put your archive tree to 'extract'.
 Run 'perl unrar.pl'.
 See content of 'extracted' and 'extracted-arch' and not extracted content inside 'extract'.
 
+See example image http://bit.ly/a1hDRD .
+
 Inside 'tests' you can see structure of what you can put to 'extract'.
 
-Install Perl. On Windows try http://strawberryperl.com/ .
+=== Install ===
+
+Perl should be installed. Try http://strawberryperl.com/ .
+
+git clone git://github.com/mj41/auto-unrar.git auto-unrar
+cd auto-unrar
+mkdir extract
+mkdir extracted
+mkdir extract-arch
+cpan Term::ReadKey
+cpan YAML::Any
+
+=== Run ===
+
+cd auto-unrar/bin
+perl unrar.pl
+
+Press:
+* P ... pause,
+* C .. continue,
+* Q .. quit.
+
+
+== Future development and donations ==
+Ping me (mj41) on irc://irc.freenode.org/perl6.cz or au@mj41.cz . 
+We can discuss bugs and feature requests.
+
+Feel free to donate some money to support development on 
+http://pledgie.com/campaigns/9585 . Thank you.
+
 
