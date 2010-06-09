@@ -314,6 +314,9 @@ sub get_content_info_and_hash {
 
 sub save_item_rec_content_info {
     my ( $state, $dconf, $base_path, $item_sub_path, $info, $save_content_info ) = @_;
+    
+    return 1 unless $item_sub_path;
+    
     $info = {} unless defined $info;
 
     my ( $content_info, $hash ) = get_content_info_and_hash( $base_path, $item_sub_path );
@@ -346,7 +349,7 @@ sub save_item_done {
 
     } elsif ( $state_store_type eq 'perl' ) {
         my $dumper_obj = Data::Dumper->new( [ $state ], [ 'state' ] );
-        $dumper_obj->Purity(1)->Terse(1)->Deepcopy(1)->Sortkeys(1);
+        $dumper_obj->Purity(1)->Terse(1)->Deepcopy(1)->Sortkeys(1)->Indent(1);
         my $state_dump_code = $dumper_obj->Dump;
 
         do_cmd_sub(
@@ -969,20 +972,18 @@ sub process_unrar_dir_ok {
         $ud_err_code, $base_dir
     ) = @_;
 
-    return 1 if $deep >= $dconf->{basedir_deep};
-
-    if ( $dconf->{save_ok_info} ) {
-        # Save state when extracted ok.
-        my $base_info = {
-            ok => 1,
-            type => 'rar',
-        };
-        my $save_full_info = 1;
-        save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
-    }
-
-    # Add this to done list.
     if ( $sub_dir ) {
+        if ( $dconf->{save_ok_info} ) {
+            # Save state when extracted ok.
+            my $base_info = {
+                ok => 1,
+                type => 'rar',
+            };
+            my $save_full_info = 1;
+            save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
+        }
+
+        # Add this to done list.
         push @$finish_cmds, [ 'save_done', $sub_dir ];
     }
 
@@ -996,7 +997,7 @@ sub process_unrar_dir_ok {
     @$undo_cmds = ();
     @$finish_cmds = ();
     
-    return 1;
+    return save_state( $state, $dconf );
 }
 
 
@@ -1006,21 +1007,22 @@ sub process_unrar_dir_err {
         $ud_err_code, $base_dir
     ) = @_;
             
-    return 1 if $deep >= $dconf->{basedir_deep};
-
-    # Save state when error occured.
-    my $base_info = {
-        error => 1,
-        error_info => {
-            # log => $dir_log,
-            type => 'rar',
-            err_code => $ud_err_code,
-        },
-    };
-    dumper( 'Inserting new error info', $base_info ) if $ver >= 5;
-    my $save_full_info = ( $dconf->{save_err_info} );
-    save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
-    # dumper( '$state', $state ); # debug
+    if ( $sub_dir ) {
+        
+        # Save state when error occured.
+        my $base_info = {
+            error => 1,
+            error_info => {
+                # log => $dir_log,
+                type => 'rar',
+                err_code => $ud_err_code,
+            },
+        };
+        dumper( 'Inserting new error info', $base_info ) if $ver >= 5;
+        my $save_full_info = ( $dconf->{save_err_info} );
+        save_item_rec_content_info( $state, $dconf, $base_dir, $sub_dir, $base_info, $save_full_info );
+        # dumper( '$state', $state ); # debug
+    }
 
     # Undo command.
     @$undo_cmds = reverse @$undo_cmds;
@@ -1031,7 +1033,49 @@ sub process_unrar_dir_err {
     @$undo_cmds = ();
     @$finish_cmds = ();
 
-    return 1;
+    return save_state( $state, $dconf );
+}
+
+
+
+sub process_unrar_archive_ok {
+    my ( 
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+        $part_sub_path, $rar_parts_list
+    ) = @_;
+
+    # Finish command.
+    if ( scalar @$finish_cmds ) {
+        dumper( "Finishing archive $part_sub_path (deep $deep):", $finish_cmds, 1 ) if $ver >= 5;
+        do_cmds( $state, $dconf, $finish_cmds );
+    }
+
+    # Empty stacks.
+    @$undo_cmds = ();
+    @$finish_cmds = ();
+    
+    return save_state( $state, $dconf );
+}
+
+
+sub process_unrar_archive_err { 
+    my (
+        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+        $part_sub_path, $rar_parts_list
+    ) = @_;
+            
+    # ToDo save error - check for modifications next time.
+
+    # Undo command.
+    @$undo_cmds = reverse @$undo_cmds;
+    dumper( "Undoing archive '$part_sub_path' (deep $deep):", $undo_cmds, 1 ) if $ver >= 5;
+    do_cmds( $state, $dconf, $undo_cmds );
+
+    # Empty stacks.
+    @$undo_cmds = ();
+    @$finish_cmds = ();
+
+    return save_state( $state, $dconf );
 }
 
 
@@ -1120,10 +1164,12 @@ sub unrar_dir {
             unless ( defined $ud_err_code ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
 
-                process_unrar_dir_ok( 
-                    $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
-                    $ud_err_code, $base_dir
-                );
+                if ( $deep < $dconf->{basedir_deep} ) {
+                    process_unrar_dir_ok( 
+                        $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
+                        $ud_err_code, $base_dir
+                    );
+                }
                 
                 next; # Continue to next directory item.
             }
@@ -1131,10 +1177,12 @@ sub unrar_dir {
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed (err code $ud_err_code).\n" if $ver >= 5;
             
-            process_unrar_dir_err(
-                $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
-                $ud_err_code, $base_dir
-            );
+            if ( $deep < $dconf->{basedir_deep} ) {
+                process_unrar_dir_err(
+                    $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
+                    $ud_err_code, $base_dir
+                );
+            }
 
             if ( $deep < $dconf->{basedir_deep} ) {
                 return $ud_err_code if $ud_err_code <= -4; # Too fatal.
@@ -1182,11 +1230,12 @@ sub unrar_dir {
                 dumper( "rar_parts_list", $rar_parts_list ) if $rar_parts_list;
             }
             if ( $rar_rc != 0 ) {
+                my $archive_sub_path = catfile( $sub_dir, $name );
+
                 # No first part of multipart archive.
                 if ( $rar_rc == 1 ) {
-                    print "$extract_err\n" if $ver >= 6;
-                    my $part_sub_path = catfile( $sub_dir, $name );
-                    $files_done->{ $part_sub_path } = 1;
+                    print "Extract error: '$extract_err'\n" if $ver >= 6;
+                    $files_done->{ $archive_sub_path } = 1;
                     next;
                 }
                 
@@ -1219,10 +1268,16 @@ sub unrar_dir {
                     }
                     print "Continuing inside subdir '$sub_dir' ($deep, $dconf->{basedir_deep}) after error.\n" if $ver >= 3;
 
+                    if ( $deep < $dconf->{basedir_deep} ) {
+                        process_unrar_archive_err(
+                            $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+                            $archive_sub_path, $rar_parts_list
+                        );
+                    }
+
                     $keypress_obj->process_keypress();
                     return -5 if $keypress_obj->get_exit_keypressed();
                     next;
-
                 }
 
                 # Extracted ok.
@@ -1236,6 +1291,13 @@ sub unrar_dir {
                         my $full_part_path = catdir( $dir_name, $part );
                         push @$finish_cmds, [ 'unlink', $full_part_path ];
                     }
+                }
+
+                if ( $deep < $dconf->{basedir_deep} ) {
+                    process_unrar_archive_ok(
+                        $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
+                        $archive_sub_path, $rar_parts_list
+                    );
                 }
 
                 $keypress_obj->process_keypress();
@@ -1450,7 +1512,7 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
                 next unless -d $i_path;
                 my $full_item_name = '/' . $item;
                 print "full_item_name: '$full_item_name'\n" if $ver >= 10;
-                remove_item_from_state( $state, '/' . $full_item_name );
+                remove_item_from_state( $state, $full_item_name );
             }
             save_state( $state, $dconf );
         }
