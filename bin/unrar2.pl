@@ -17,7 +17,6 @@ respect/dumplicate directory structure.
 
 =head1 ToDo
 
-* mtime for directories
 * unrar and duplicate names
 ** unrar to temp directory - go back if error
 ** compare fname and fname.1 content, remove .1 if same
@@ -99,6 +98,8 @@ $keypress_obj->set_quit_pressed_sub(
 );
 $keypress_obj->set_return_on_exit( 1 );
 
+
+my $src_dir_mtimes = {};
 
 =head1 METHODS
 
@@ -450,6 +451,41 @@ sub get_item_mtime {
 }
 
 
+sub set_dir_mtime {
+    my ( $dest_dir_path, $src_mtime ) = @_;
+
+    unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
+        print "Command utime for '$dest_dir_path' failed: $^E\n" if $ver >= 1;
+        return 0;
+    }
+
+    print "Finished setting '$dest_dir_path' mtime to " . (localtime $src_mtime) . "\n" if $ver >= 8;
+    return 1;
+}
+    
+
+sub set_saved_dir_mtime {
+    my ( $dest_dir_path, $src_dir_part ) = @_;
+
+    unless ( defined $src_dir_mtimes->{ $src_dir_part } ) {
+        print "Error: Saved mtime for dir '$src_dir_part' not found.\n" if $ver >= 3;
+        return 0;
+    }
+    
+    return set_dir_mtime( $dest_dir_path, $src_dir_mtimes->{ $src_dir_part } );
+}
+
+    
+sub copy_dir_mtime {
+    my ( $dest_dir_path, $src_dir_path ) = @_;
+    
+    my $src_mtime = get_item_mtime( $src_dir_path );
+    return 0 unless defined $src_mtime;
+
+    return set_dir_mtime( $dest_dir_path, $src_mtime );
+}
+
+
 sub mkdir_copy_mtime {
     my ( $dest_dir_path, $src_dir_path ) = @_;
 
@@ -462,15 +498,7 @@ sub mkdir_copy_mtime {
         return 0;
     }
 
-    my $src_mtime = get_item_mtime( $src_dir_path );
-    return 0 unless defined $src_mtime;
-
-    unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
-        print "Command utime '$dest_dir_path' failed: $^E\n" if $ver >= 1;
-        return 0;
-    }
-    print "mkdir_copy_mtime '$dest_dir_path' mtime set to " . (localtime $src_mtime) . "\n" if $ver >= 8;
-    return 1;
+    return copy_dir_mtime( $dest_dir_path, $src_dir_path );
 }
 
 
@@ -922,6 +950,14 @@ sub do_cmds {
                $all_ok = 0;
             }
 
+        # set_saved_dir_mtime        
+        } elsif ( $cmd eq 'set_saved_dir_mtime' ) {
+            my $dest_dir_path = shift @$cmd_conf;
+            my $sub_dir = shift @$cmd_conf;
+            unless ( set_saved_dir_mtime( $dest_dir_path, $sub_dir ) ) {
+                $all_ok = 0;
+            }
+            
         # rm_empty_dir
         } elsif ( $cmd eq 'rm_empty_dir' ) {
             my $dir_path = shift @$cmd_conf;
@@ -1041,12 +1077,12 @@ sub process_unrar_dir_err {
 sub process_unrar_archive_ok {
     my ( 
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-        $part_sub_path, $rar_parts_list
+        $file_sub_path, $rar_parts_list
     ) = @_;
 
     # Finish command.
     if ( scalar @$finish_cmds ) {
-        dumper( "Finishing archive $part_sub_path (deep $deep):", $finish_cmds, 1 ) if $ver >= 5;
+        dumper( "Finishing archive $file_sub_path (deep $deep):", $finish_cmds, 1 ) if $ver >= 5;
         do_cmds( $state, $dconf, $finish_cmds );
     }
 
@@ -1061,14 +1097,14 @@ sub process_unrar_archive_ok {
 sub process_unrar_archive_err { 
     my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-        $part_sub_path, $rar_parts_list
+        $file_sub_path, $rar_parts_list
     ) = @_;
             
     # ToDo save error - check for modifications next time.
 
     # Undo command.
     @$undo_cmds = reverse @$undo_cmds;
-    dumper( "Undoing archive '$part_sub_path' (deep $deep):", $undo_cmds, 1 ) if $ver >= 5;
+    dumper( "Undoing archive '$file_sub_path' (deep $deep):", $undo_cmds, 1 ) if $ver >= 5;
     do_cmds( $state, $dconf, $undo_cmds );
 
     # Empty stacks.
@@ -1105,10 +1141,13 @@ sub unrar_dir {
 
     my $base_dir = $dconf->{src_dir};
 
-    my $dir_name = catdir( $base_dir, $sub_dir );
-    print "Entering directory '$dir_name'\n" if $ver >= 3;
-
-    my $items = load_dir_content( $dir_name );
+    my $full_src_dir = catdir( $base_dir, $sub_dir );
+    print "Entering directory '$full_src_dir'\n" if $ver >= 3;
+    
+    # Save mtime to cache for resurection.    
+    $src_dir_mtimes->{ $sub_dir } = get_item_mtime( $full_src_dir );
+    
+    my $items = load_dir_content( $full_src_dir );
     return -2 unless defined $items;
     return undef unless scalar @$items;
 
@@ -1206,7 +1245,7 @@ sub unrar_dir {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $state->{done}->{ $file_sub_path };
 
-        my $path = catdir( $dir_name, $name );
+        my $path = catfile( $full_src_dir, $name );
         # all files
         if ( -f $path ) {
             #print "$space$name ($path) " if $ver >= 3;
@@ -1230,12 +1269,10 @@ sub unrar_dir {
                 dumper( "rar_parts_list", $rar_parts_list ) if $rar_parts_list;
             }
             if ( $rar_rc != 0 ) {
-                my $archive_sub_path = catfile( $sub_dir, $name );
-
                 # No first part of multipart archive.
                 if ( $rar_rc == 1 ) {
                     print "Extract error: '$extract_err'\n" if $ver >= 6;
-                    $files_done->{ $archive_sub_path } = 1;
+                    $files_done->{ $file_sub_path } = 1;
                     next;
                 }
                 
@@ -1271,7 +1308,7 @@ sub unrar_dir {
                     if ( $deep < $dconf->{basedir_deep} ) {
                         process_unrar_archive_err(
                             $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-                            $archive_sub_path, $rar_parts_list
+                            $file_sub_path, $rar_parts_list
                         );
                     }
 
@@ -1288,7 +1325,7 @@ sub unrar_dir {
                     my $part_path = catfile( $sub_dir, $part );
                     push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{basedir_deep};
                     if ( $dconf->{remove_done} ) {
-                        my $full_part_path = catdir( $dir_name, $part );
+                        my $full_part_path = catfile( $full_src_dir, $part );
                         push @$finish_cmds, [ 'unlink', $full_part_path ];
                     }
                 }
@@ -1296,7 +1333,7 @@ sub unrar_dir {
                 if ( $deep < $dconf->{basedir_deep} ) {
                     process_unrar_archive_ok(
                         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-                        $archive_sub_path, $rar_parts_list
+                        $file_sub_path, $rar_parts_list
                     );
                 }
 
@@ -1326,7 +1363,7 @@ sub unrar_dir {
         next if exists $state->{done}->{ $file_sub_path };
         next if exists $files_done->{ $file_sub_path };
 
-        my $path = catdir( $dir_name, $name );
+        my $path = catfile( $full_src_dir, $name );
         # all files
         if ( -f $path ) {
             #print "$space$name ($path) " if $ver >= 3;
@@ -1335,24 +1372,25 @@ sub unrar_dir {
         }
     }
 
-    if ( $sub_dir ) {
-        # remove empty dirs
-        if ( $dconf->{remove_done} ) {
-            push @$finish_cmds, [ 'rm_rec_empty_dir', $dir_name ];
-        }
-    }
-
-    if ( $deep < $dconf->{basedir_deep} ) {
-        # Finish prev.
-        if ( scalar @$finish_cmds ) {
-            dumper( "finishing prev sub_dir '$sub_dir'", $finish_cmds ) if $ver >= 5;
-            do_cmds( $state, $dconf, $finish_cmds );
-            @$finish_cmds = ();
-        }
-    }
 
     return -3 if $extract_error;
-    return -3 if $not_processed_parts_found;
+    return -3 if $not_processed_parts_found;        
+
+    if ( $deep >= $dconf->{basedir_deep} ) {
+        push @$finish_cmds, [ 
+            'set_saved_dir_mtime',
+            catdir( $dconf->{dest_dir}, $sub_dir ),
+            $sub_dir,
+        ];    
+    }            
+            
+    # Recursive remove main dir.
+    if ( $deep == $dconf->{basedir_deep} ) {        
+        if ( $dconf->{remove_done} ) {
+            push @$finish_cmds, [ 'rm_rec_empty_dir', $full_src_dir ];
+        }
+    }
+
     return undef;
 }
 
@@ -1360,6 +1398,9 @@ sub unrar_dir {
 sub unrar_dir_start {
     my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
 
+    # Reset.    
+    $src_dir_mtimes = {};
+    
     my $ud_err_code = unrar_dir(
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep
     );

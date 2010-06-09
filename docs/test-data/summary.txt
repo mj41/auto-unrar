@@ -198,9 +198,12 @@ Diff of input directory ('../../auto-unrar-data/in') tree:
 |   |-- test38-file.part001.rar                                 <
 |   |-- test38-file.part002.part1.rar                           <
 |   `-- test38-file.part002.part2.rar                           <
+|-- subdir12                                                    <
+|   |-- subdir-empty                                            <
+|   `-- test39.txt                                              <
 `-- test0.txt                                                   <
 
-21 directories, 112 files                                       |  11 directories, 40 files
+23 directories, 113 files                                       |  11 directories, 40 files
 
 ---------------------------------------------------------------------------------------------------------
 Diff of output directory ('../../auto-unrar-data/out') tree:
@@ -256,9 +259,12 @@ Diff of output directory ('../../auto-unrar-data/out') tree:
                                                                 >  |-- subdir11
                                                                 >  |   |-- test38-file.part001.txt
                                                                 >  |   `-- test38-file.part002.txt
+                                                                >  |-- subdir12
+                                                                >  |   |-- subdir-empty
+                                                                >  |   `-- test39.txt
                                                                 >  `-- test0.txt
 
-0 directories, 0 files                                          |  15 directories, 36 files
+0 directories, 0 files                                          |  17 directories, 37 files
 
 ---------------------------------------------------------------------------------------------------------
 Diff of rsync exclude list file ('../../auto-unrar-data/unrar-data-rsync-exclude.txt') content:
@@ -269,6 +275,7 @@ Diff of rsync exclude list file ('../../auto-unrar-data/unrar-data-rsync-exclude
                                                                 >  - /subdir07
                                                                 >  - /subdir10
                                                                 >  - /subdir11
+                                                                >  - /subdir12
                                                                 >  - /test0.txt
 
 ---------------------------------------------------------------------------------------------------------

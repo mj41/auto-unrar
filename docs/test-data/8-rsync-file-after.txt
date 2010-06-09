@@ -4,4 +4,5 @@
 - /subdir07
 - /subdir10
 - /subdir11
+- /subdir12
 - /test0.txt

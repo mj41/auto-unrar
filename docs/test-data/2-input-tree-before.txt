@@ -131,6 +131,9 @@
 |   |-- test38-file.part001.rar
 |   |-- test38-file.part002.part1.rar
 |   `-- test38-file.part002.part2.rar
+|-- subdir12
+|   |-- subdir-empty
+|   `-- test39.txt
 `-- test0.txt
 
-21 directories, 112 files
+23 directories, 113 files

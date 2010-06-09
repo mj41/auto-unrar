@@ -49,6 +49,9 @@
 |-- subdir11
 |   |-- test38-file.part001.txt
 |   `-- test38-file.part002.txt
+|-- subdir12
+|   |-- subdir-empty
+|   `-- test39.txt
 `-- test0.txt
 
-15 directories, 36 files
+17 directories, 37 files
