@@ -526,6 +526,7 @@ sub do_for_rar_file {
     my $is_rar_archive = 0;
     my $part_num = undef;
     my $multipart_type = undef;
+    my $part_num_str_length = undef;
 
     if ( $file_name =~ /^(.*)\.part(\d+)\.rar$/ ) {
         my $tmp_base_name_part = $1;
@@ -543,6 +544,7 @@ sub do_for_rar_file {
         if ( not $mr_type_found ) {
             $base_name_part = $tmp_base_name_part;
             $part_num = $tmp_part_num;
+            $part_num_str_length = length( $tmp_part_num );
             $is_rar_archive = 1;
             $multipart_type = 'part';
         }
@@ -554,6 +556,7 @@ sub do_for_rar_file {
     } elsif ( $file_name =~ /^(.*)\.rar$/ ) {
         $base_name_part = $1;
         $part_num = 1;
+        $part_num_str_length = undef;
         $is_rar_archive = 1;
         # initial value, is set to '' unless other parts found
         $multipart_type = 'mr';
@@ -561,6 +564,7 @@ sub do_for_rar_file {
     } elsif ( $file_name =~ /^(.*)\.r(\d+)$/ ) {
         $base_name_part = $1;
         $part_num = $2 + 2;
+        $part_num_str_length = length( $2 );
         $is_rar_archive = 1;
         # initial value, is set to '' unless other parts found
         $multipart_type = 'mr';
@@ -568,15 +572,19 @@ sub do_for_rar_file {
     } elsif ( $file_name =~ /^(.*)\.(\d{3})$/ ) {
         $base_name_part = $1;
         $part_num = $2;
+        $part_num_str_length = length( $2 );
         $is_rar_archive = 1;
         $multipart_type = 'unsup';
     }
 
     return ( 0, "File isn't rar archive.", undef, undef ) unless $is_rar_archive;
 
+    
+
     return ( 1, "File is part of multiparts archive (type $multipart_type), but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
 
     return -1 unless mkpath_copy_mtime( $dconf->{dest_dir}, $base_dir, $sub_dir );
+
 
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
@@ -599,7 +607,8 @@ sub do_for_rar_file {
         dumper( '@files_extracted', \@files_extracted );
     }
 
-    my @rar_parts_list = ( $file_name );
+    my @rar_parts_list = ();
+    $rar_parts_list[0] = $file_name;
 
     my %files_extracted = map { $_ => 1 } @files_extracted;
     #dumper( '%files_extracted', \%files_extracted );
@@ -609,54 +618,104 @@ sub do_for_rar_file {
         next NEXT_FILE if $file_name eq $next_file_name;
 
         my $other_part_num = undef;
+        my $other_part_num_str_length = undef;
         
         if ( $multipart_type eq 'part' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.part(\d+)\.rar$/ ) {
                 $other_part_num = $1;
+                $other_part_num_str_length = length( $1 );
             }
 
         } elsif ( $multipart_type eq 'mr' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.r(\d+)$/ ) {
                 $other_part_num = $1 + 2;
+                unless ( defined $part_num_str_length ) {
+                    $part_num_str_length = length( $1 );
+                }
+                $other_part_num_str_length = length( $1 );
             }
 
         } elsif ( $multipart_type eq 'unsup' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.(\d+)$/ ) {
                 $other_part_num = $1;
+                $other_part_num_str_length = length( $1 );
+            }
+        }
+        
+        next unless defined $other_part_num;
+        
+        if ( defined $part_num_str_length ) {
+            if ( $other_part_num_str_length != $part_num_str_length ) {
+                print "Error: Found other_part_num $other_part_num with length $other_part_num_str_length which isn't same as base part length $part_num_str_length.\n" if $ver >= 2;
+                next;
             }
         }
 
-        if ( defined $other_part_num && $part_num != $other_part_num ) {
-            $other_part_found = 1;
+        if ( $part_num == $other_part_num ) {
+            print "Error: Found other_part_num $other_part_num same as part_num $part_num.\n" if $ver >= 2;
+            next;
+        }
+        
+        $other_part_found = 1;
 
-            print "Other rar part added '$next_file_name' ($other_part_num) for base_name '$base_name_part' and type '$multipart_type'.\n" if $ver >= 5;
-            push @rar_parts_list, $next_file_name;
+        print "Other rar part added '$next_file_name' ($other_part_num) for base_name '$base_name_part' and type '$multipart_type'.\n" if $ver >= 5;
+        $rar_parts_list[ $other_part_num - 1 ] = $next_file_name;
 
-            my $next_file_path = catfile( $base_dir, $sub_dir, $next_file_name );
-            my %next_rar_conf = (
-                '-archive' => $next_file_path,
-                '-initial' => $dest_dir,
-            );
-            $rar_conf{'-verbose'} = $rar_ver if $rar_ver;
-            my $next_rar_obj = Archive::Rar->new( %next_rar_conf );
-            $next_rar_obj->List();
+        my $next_file_path = catfile( $base_dir, $sub_dir, $next_file_name );
+        my %next_rar_conf = (
+            '-archive' => $next_file_path,
+            '-initial' => $dest_dir,
+        );
+        $rar_conf{'-verbose'} = $rar_ver if $rar_ver;
+        my $next_rar_obj = Archive::Rar->new( %next_rar_conf );
+        $next_rar_obj->List();
 
-            my @next_files_extracted = $next_rar_obj->GetBareList();
-            next NEXT_FILE unless scalar @next_files_extracted;
+        my @next_files_extracted = $next_rar_obj->GetBareList();
+        next NEXT_FILE unless scalar @next_files_extracted;
 
-            #dumper( '@next_files_extracted', \@next_files_extracted );
-            foreach my $next_file ( @next_files_extracted ) {
-                next unless defined $next_file; # Archive::Rar bug?
-                next if exists $files_extracted{$next_file};
+        #dumper( '@next_files_extracted', \@next_files_extracted );
+        foreach my $next_file ( @next_files_extracted ) {
+            next unless defined $next_file; # Archive::Rar bug?
+            next if exists $files_extracted{$next_file};
 
-                $files_extracted{$next_file} = 1;
-                push @files_extracted, $next_file;
-                print "Addding new extracted file '$next_file' to list from rar part num $other_part_num.\n" if $ver >= 8;
-            }
+            $files_extracted{$next_file} = 1;
+            push @files_extracted, $next_file;
+            print "Addding new extracted file '$next_file' to list from rar part num $other_part_num.\n" if $ver >= 8;
         }
 
     } # foreach end
     $multipart_type = '' unless $other_part_found;
+
+
+    my $found_missing_part = 0;
+    # ToDo - extract num of parts from archive.
+    if ( $multipart_type ) {
+        my $num_sprintf_format = '%0' . $part_num_str_length . 'd';
+        foreach my $num ( 0..$#rar_parts_list ) {
+            my $t_pfname = $rar_parts_list[ $num ];
+            next if defined $t_pfname;
+            
+            $found_missing_part = 1;
+            my $t_pnum = $num + 1;
+            
+            my $exp_file_name = 'unknown';
+            if ( $multipart_type eq 'part' ) {
+                my $other_part_num = $t_pnum;
+                $exp_file_name = $base_name_part . '.part' . sprintf( $num_sprintf_format, $other_part_num ) . '.rar';
+
+            } elsif ( $multipart_type eq 'mr' ) {
+                my $other_part_num = $t_pnum - 2;
+                $exp_file_name = $base_name_part . '.r' . sprintf( $num_sprintf_format, $other_part_num );
+
+            } elsif ( $multipart_type eq 'unsup' ) {
+                my $other_part_num = $t_pnum;
+                $exp_file_name = $base_name_part . '.' . sprintf( $num_sprintf_format, $other_part_num );
+            }
+            
+            my $ex_file_path = catfile( $sub_dir, $exp_file_name );
+            print "Misssing part num '" . $t_pnum . "' - guessed file name '$exp_file_name' ('$ex_file_path').\n" if $ver >= 2;
+        }
+    }
 
     if ( $ver >= 2 ) {
         my $num_of_parts = scalar @rar_parts_list;
@@ -1069,7 +1128,7 @@ sub unrar_dir {
             }
 
             # Unrar failed.
-            print "Dir '$new_sub_dir' unrar failed.\n" if $ver >= 5;
+            print "Dir '$new_sub_dir' unrar failed (err code $ud_err_code).\n" if $ver >= 5;
             
             process_unrar_dir_err(
                 $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
@@ -1135,6 +1194,7 @@ sub unrar_dir {
                 # If error -> do not process these archives as normal files
                 # in next code.
                 foreach my $part ( @$rar_parts_list ) {
+                    next unless defined $part;
                     my $part_sub_path = catfile( $sub_dir, $part );
                     $files_done->{ $part_sub_path } = 1;
                     $parts_status->{$part} = $extract_err ? -1 : 1;
@@ -1167,6 +1227,7 @@ sub unrar_dir {
                 # Extracted ok.
                 # Remove rar archives from list.
                 foreach my $part ( @$rar_parts_list ) {
+                    next unless defined $part;
                     print "Archive part '$part' processed.\n" if $ver >= 5;
                     my $part_path = catfile( $sub_dir, $part );
                     push @$finish_cmds, [ 'save_done', $part_path ] if $deep < $dconf->{basedir_deep};
@@ -1264,6 +1325,20 @@ sub unrar_dir_start {
 }
 
 
+sub remove_item_from_state {
+    my ( $state, $item_name ) = @_;
+    
+    if ( exists $state->{done}->{$item_name} ) {
+        print "Removing item '$item_name' from state:done.\n" if $ver >= 6;
+        delete $state->{done}->{$item_name};
+    }
+    if ( exists $state->{info}->{$item_name} ) {
+        print "Removing item '$item_name' from state:info.\n" if $ver >= 6;
+        delete $state->{info}->{$item_name};
+    }
+    return 1;
+}
+
 
 my $dirs_conf = load_config( $conf_fpath );
 # dumper( '$dirs_conf', $dirs_conf ); my_croak(); # debug
@@ -1356,21 +1431,32 @@ foreach my $dconf_num ( 0..$last_dconf_num ) {
         }
 
         # Remove some file from done and info parts.
-        my $key_to_remove = undef;
-        if ( $key_to_remove ) {
+        my $item_name = undef;
+        if ( $item_name ) {
             dumper( 'old $state', $state ) if $ver >= 6;
-            if ( exists $state->{done}->{$key_to_remove} ) {
-                delete $state->{done}->{$key_to_remove};
-            }
-            if ( exists $state->{info}->{$key_to_remove} ) {
-                delete $state->{info}->{$key_to_remove};
-            }
+            remove_item_from_state( $state, $item_name );
             dumper( 'new $state', $state ) if $ver >= 6;
             save_state( $state, $dconf );
         }
 
+
+        # Remove dirs found inside input dir from state:done list.
+        if ( 0 ) {
+            my $items = load_dir_content( $dconf->{src_dir} );
+            # dumper( '$items', $items ) if $ver >= 10;
+            foreach my $item ( @$items ) {
+                my $i_path = catfile( $dconf->{src_dir}, $item );
+                next unless -d $i_path;
+                my $full_item_name = '/' . $item;
+                print "full_item_name: '$full_item_name'\n" if $ver >= 10;
+                remove_item_from_state( $state, '/' . $full_item_name );
+            }
+            save_state( $state, $dconf );
+        }
+
+
         # Dump state.
-        if ( 1 ) {
+        if ( 0 ) {
             dumper( '$state', $state );
         }
 
