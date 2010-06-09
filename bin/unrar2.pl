@@ -17,7 +17,11 @@ respect/dumplicate directory structure.
 
 =head1 ToDo
 
+* fix Archive::Rar atributes bug
+* check number of parts from archive
+* add was modified check for archives in base dir (root)
 * unrar and duplicate names
+* check for error during state loading (do)
 ** unrar to temp directory - go back if error
 ** compare fname and fname.1 content, remove .1 if same
 * refactore, better configuration, help, ...
