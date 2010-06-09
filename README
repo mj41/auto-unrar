@@ -12,7 +12,7 @@ Features:
 ** .001, .002, ...
 * duplicate directory structure tree 
 ** respect basedir_deep configuration option
-** see http://bit.ly/9N2iSW ( docs/test-data/8-after-before-diff.txt )
+** see http://bit.ly/dafLxF ( docs/test-data/summary.txt )
 * move/rename normal files (no rar archives)
 * check minimum free space on device
 * can delete archives if extracted ok

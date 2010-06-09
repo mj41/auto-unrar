@@ -587,6 +587,7 @@ sub do_for_rar_file {
 
 
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
+    my $file_sub_path = catfile( $sub_dir, $file_name );
     my $file_path = catfile( $base_dir, $sub_dir, $file_name );
 
     my $rar_ver = $ver - 10;
@@ -713,13 +714,13 @@ sub do_for_rar_file {
             }
             
             my $ex_file_path = catfile( $sub_dir, $exp_file_name );
-            print "Misssing part num '" . $t_pnum . "' - guessed file name '$exp_file_name' ('$ex_file_path').\n" if $ver >= 2;
+            print "Misssing part num '" . $t_pnum . "' - guessed file name '$ex_file_path'.\n" if $ver >= 2;
         }
     }
 
     if ( $ver >= 2 ) {
         my $num_of_parts = scalar @rar_parts_list;
-        print "Extracting file '$file_name'";
+        print "Extracting file '$file_sub_path'";
         print " (first of $num_of_parts parts)" if $num_of_parts > 1;
         print ".\n";
     }
