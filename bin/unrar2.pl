@@ -12,14 +12,12 @@ auto-unrar
 * check number of parts from archive
 * add was modified check for archives in base dir (root)
 * unrar and duplicate names
-* check for error during state loading (do)
 ** unrar to temp directory - go back if error
 ** compare fname and fname.1 content, remove .1 if same
 * password protected archives support
 * backup old version of state_fpath files, remove backup after normal end
 * unrar/test full paths of files in archive
 * refactor to Perl package
-* add archive parts count check
 * use do_cmd_sub inside do_cmds ?
 
 =cut 
@@ -249,19 +247,19 @@ sub main {
 
     # Main loop.
     my $last_dconf_num = $#$dirs_conf;
-    foreach my $dconf_num ( 0..$last_dconf_num ) {
+    DCONF: foreach my $dconf_num ( 0..$last_dconf_num ) {
         my $dconf = $dirs_conf->[ $dconf_num ];
 
         # skip if only one selected
         if ( defined $options->{conf_part} && $dconf->{name} ne $options->{conf_part} ) {
             print "Skipping configuration $dconf->{name} (only '$options->{conf_part}' selected).\n" if $ver >= 2;
-            next;
+            next DCONF;
         }
 
         # Check configuration.
         if ( $dconf->{basedir_deep} <= 0 ) {
             print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
-            next;
+            next DCONF;
         }
 
         my $state = load_state( $dconf );
@@ -271,12 +269,12 @@ sub main {
 
             unless ( -d $dconf->{src_dir} ) {
                 print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
-                next;
+                next DCONF;
             }
 
             unless ( -d $dconf->{dest_dir} ) {
                 print "Output directory '$dconf->{dest_dir}' doesn't exists.\n" if $ver >= 1;
-                next;
+                next DCONF;
             }
             
             dumper( 'dconf', $dconf ) if $ver >= 5;
@@ -310,17 +308,54 @@ sub main {
 
         # Cmd 'process_action_file'.
         } elsif ( $options->{cmd} eq 'process_action_file' ) {
-            foreach my $anum ( 0..$#$action_file_data ) {
+            ADATA: foreach my $anum ( 0..$#$action_file_data ) {
                 my $acmd = $action_file_data->[ $anum ];
-                print "Action: '$acmd->{action}'\n";
+                print "Action " . ($anum+1) . ": '$acmd->{action}'\n" if $ver >= 8;
+
+                if ( exists $acmd->{where} ) {
+                    my $where = $acmd->{where};
+                    foreach my $w_key ( keys %$where ) {
+                        my $w_value = $where->{$w_key};
+                        print "Key '$w_key', value '$w_value'\n" if $ver >= 10;
+                        
+                        if ( not exists $dconf->{$w_key} ) {
+                            print "Unknown configuration key '$w_key'\n" if $ver >= 2;
+                            next ADATA;
+                        
+                        } elsif ( $dconf->{$w_key} ne $w_value ) {
+                            print "Configuration key '$w_key' has value '$dconf->{$w_key}' != '$w_value'.\n" if $ver >= 10;
+                            next ADATA;
+                        }
+                    }
+                    
+                    print "Where condition fulfilled.\n" if $ver >= 4;
+                }
+
+                
+                if ( $acmd->{action} eq 'remove_from_done_list' ) {
+                    unless ( exists $acmd->{what} ) {
+                        print "What part not found in action file.\n" if $ver >= 2;
+                        next ADATA;
+                    }
+                    foreach my $item_name ( @{$acmd->{what}} ) {
+                        print "Going to remove item '$item_name'\n" if $ver >= 10;
+                        remove_item_from_state( $state, $item_name );
+                    }
+                    
+                } else {
+                    print "Unknown action '$acmd->{action}'.\n" if $ver >= 2;
+                }
+                
             }
-            next;
+
+            save_state( $state, $dconf );
+            next DCONF;
 
 
         # Cmd 'refresh_rsync_file'.
         }elsif ( $options->{cmd} eq 'refresh_rsync_file' ) {
             save_state( $state, $dconf );
-            next;
+            next DCONF;
 
         
         # Cmd 'db_cleanup'.
@@ -340,14 +375,14 @@ sub main {
             }
 
             save_state( $state, $dconf );
-            next;
+            next DCONF;
 
                 
         # Cmd 'db_remove_info'.
         } elsif ( $options->{cmd} eq 'db_remove_info' ) {
             delete $state->{info} if exists $state->{info};
             save_state( $state, $dconf );
-            next;
+            next DCONF;
 
 
         # Cmd 'db_export'.
@@ -361,7 +396,7 @@ sub main {
                 $dconf->{state_fpath} =~ s{\.db$}{\.pl};
             }
             save_state( $state, $dconf );
-            next;
+            next DCONF;
             
 
         # Cmd 'db_remove_item'.
@@ -372,7 +407,7 @@ sub main {
             remove_item_from_state( $state, $item_name );
             dumper( 'new $state', $state ) if $ver >= 6;
             save_state( $state, $dconf );
-            next;
+            next DCONF;
 
 
         # Cmd 'db_remove_dirs_from_src_dir'.
@@ -384,14 +419,14 @@ sub main {
 
             foreach my $item ( @$items ) {
                 my $i_path = catfile( $dconf->{src_dir}, $item );
-                next unless -d $i_path;
+                next DCONF unless -d $i_path;
                 my $full_item_name = '/' . $item;
                 print "full_item_name: '$full_item_name'\n" if $ver >= 10;
                 remove_item_from_state( $state, $full_item_name );
             }
 
             save_state( $state, $dconf );
-            next;
+            next DCONF;
 
         } # end of last cmd
 
