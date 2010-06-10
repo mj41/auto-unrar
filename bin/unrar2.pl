@@ -6,26 +6,15 @@ use warnings;
 
 auto-unrar
 
-=head1 SYNOPSIS
-
-Smart extracting of RAR archives.
-
-=head1 DESCRIPTION
-
-Can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives while
-respect/dumplicate directory structure. 
-
 =head1 ToDo
 
-* fix Archive::Rar atributes bug
+* fix Archive::Rar atributes bug and send patch to author
 * check number of parts from archive
 * add was modified check for archives in base dir (root)
 * unrar and duplicate names
 * check for error during state loading (do)
 ** unrar to temp directory - go back if error
 ** compare fname and fname.1 content, remove .1 if same
-* refactore, better configuration, help, ...
-* merge changes to Archive::Rar
 * password protected archives support
 * backup old version of state_fpath files, remove backup after normal end
 * unrar/test full paths of files in archive
@@ -39,6 +28,9 @@ respect/dumplicate directory structure.
 use Carp qw(carp croak verbose);
 use FindBin qw($RealBin);
 
+use Getopt::Long;
+use Pod::Usage;
+
 use File::Spec::Functions qw/:ALL splitpath/;
 use File::Copy;
 use File::stat;
@@ -48,64 +40,366 @@ use Data::Dumper;
 use Digest::SHA1;
 use Filesys::DfPortable;
 
-use lib "$RealBin/lib";
+use lib "$FindBin::Bin/lib";
 use App::KeyPress;
 use Archive::Rar;
 
 
-my $conf_fpath = $ARGV[0];
+=head1 NAME
 
-if ( $conf_fpath eq 'MY' ) {
-    $conf_fpath = catfile( $RealBin, '..', 'conf', 'unrar-my-conf.pl' );
+unrar2.pl - Run auto-unrar utility.
 
-} elsif ( $conf_fpath eq 'DATA' ) {
-    $conf_fpath = catfile( $RealBin, '..', 'conf', 'unrar-data-conf.pl' );
-}
+=head1 SYNOPSIS
+
+perl unrar2.pl [options]
+
+ Options:
+    --help ... Prints this help informations.
+    
+    --ver=$NUM ... Verbosity level 0..10 Default 2.
+
+    --conf=?
+      DATA or ../conf/unrar-data-conf.pl
+      MY or ../conf/unrar-my-conf.pl
+
+    --conf_part=?
+    --conf_part=mydir1
+        Process command only for given config part name.
+        
+    --cmd=? ... See availible commands below:
+
+    --cmd=unrar
+        Unrar/process all directories from configuration file.
+    
+    --cmd=process_action_file --action_fpath=$PATH
+    --cmd=process_action_file --action_fpath=../conf/clear-done-list.pl
+        Process action file. E.g. edit/clear auto-unrar database.
+    
+    --cmd=db_cleanup
+        Clean up, upgrade and fix db files.
+
+    --cmd=refresh_rsync_file
+        Refresh db and rsync files.
+
+    --cmd=db_remove_info
+        Remove 'info' part from db file.
+
+    --cmd=db_export
+        Export/save db files to other formats.
+
+    --cmd=db_remove_item --item_name=$PATH
+    --cmd=db_remove_item --item_name=/subdir2/subdir2b
+        Remove this item from db file. Use --conf_part to be more specific.
+
+    --cmd=db_remove_dirs_from_src_dir
+        Remove all directories found in source directory from db file. After this
+        auto-unrar will process all directories inside source dir again.
+
+=cut 
+
+# Global variables.
+
+my $ver = 0;
+my $keypress_obj = undef;
 
 
-my $ver = $ARGV[1];
-$ver = 2 unless defined $ver;
-
-unless ( $conf_fpath ) {
-    print <<HELP_END;
-Usage:
-  perl unrar2.pl ../conf/unrar-data-conf.pl
-  perl unrar2.pl DATA
-     ... same as above
-
-  perl unrar2.pl ../conf/unrar-my-conf.pl
-  perl unrar2.pl MY
-     ... same as above
-
-HELP_END
-    exit;
-}
-
-unless ( -f $conf_fpath ) {
-    print "Can't find defined config file '$conf_fpath'.\n";
-    exit;
-}
-
-
-my $only_dconf_name = $ARGV[2];
-
-
-
-my $keypress_obj = App::KeyPress->new(
-    $ver,
-    0 # $debug
-);
-$keypress_obj->set_quit_pressed_sub(
-    sub {
-        print "Quit keypressed.\n" if $ver >= 2;
-    }
-);
-$keypress_obj->set_return_on_exit( 1 );
-
-
+# Cache for input directories times of last modification .
 my $src_dir_mtimes = {};
 
+=head1 DESCRIPTION
+
+B<This program> run auto-unrar utility. Smart extracting or RAR archives while
+respect/dumplicate directory structure. 
+
 =head1 METHODS
+
+=head2 main
+
+Parse command line options and run commands.
+
+=cut 
+
+sub main {
+
+    # See SYNOPSIS part of perldoc above.
+    my $help = 0;
+
+    my $options = {
+        ver => 3,
+        conf_fpath => undef,
+        only_conf_part => undef,
+        cmd => undef,
+   };
+   
+    my $conf_fpath = $ARGV[0];
+
+    my $options_ok = GetOptions(
+        'help|h|?' => \$help,
+        'ver|v=i' => \$options->{'ver'},
+        'conf=s' => \$options->{'conf_fpath'},
+        'conf_part=s' => \$options->{'only_conf_part'},
+        'cmd=s' => \$options->{'cmd'},
+        
+        'action_fpath=s' => \$options->{'action_fpath'},
+        'item_name=s' => \$options->{'item_name'},
+    );
+
+    if ( $help || !$options_ok ) {
+        pod2usage(1);
+        return 0 unless $options_ok;
+        return 1;
+    }
+    
+    # Set global variables.
+    $ver = $options->{ver};
+
+    if ( ! $options->{cmd} ) {
+        print "No command selected. Option 'cmd' is mandatory. Use --help to see more info.\n";
+        return 0;
+    }
+
+    unless ( $options->{'conf_fpath'} ) {
+        print "No configuration path/name given. Option 'conf' is mandatory. Use --help to see more info.\n";
+        return 0;
+    }
+
+    # Process and test conf_fpath.
+    if ( $options->{'conf_fpath'} eq 'MY' ) {
+        $options->{'conf_fpath'}  = catfile( $RealBin, '..', 'conf', 'unrar-my-conf.pl' );
+
+    } elsif ( $options->{'conf_fpath'}  eq 'DATA' ) {
+        $options->{'conf_fpath'}  = catfile( $RealBin, '..', 'conf', 'unrar-data-conf.pl' );
+    }
+
+    unless ( -f $options->{'conf_fpath'} ) {
+        print "Can't find defined config file '$options->{'conf_fpath'}'.\n" if $ver >= 1;
+        return 0;
+    }
+
+    
+    # Prepare/check 'process_action_file' cmd variables.
+    my $action_file_data = undef;
+    if ( $options->{cmd} eq 'process_action_file' ) {
+        unless ( $options->{action_fpath} ) {
+            print "No action file path given. Option 'action_fpath' is mandatory. Use --help to see more info.\n";
+            return 0;
+        }
+        print "action_fpath: '$options->{action_fpath}'\n" if $ver >= 5;
+
+        unless ( -f $options->{action_fpath} ) {
+            print "Action file '$options->{action_fpath}' not found.\n" if $ver >= 1;
+            return 0;
+        }
+        
+
+        $action_file_data = load_perl_data( $options->{action_fpath} );
+        if ( (not $action_file_data) || ref $action_file_data ne 'ARRAY'  ) {
+            print "Action file '$options->{action_fpath}' data loading error.\n" if $ver >= 1;
+            return 0;
+        }
+
+    # Prepare/check 'db_remove_item' cmd variables.
+    } elsif ( $options->{cmd} eq 'db_remove_item' ) {
+        unless ( $options->{item_name} ) {
+            print "No item name given. Option 'item_name' is mandatory. Use --help to see more info.\n";
+            return 0;
+        }
+    }
+
+    # Init keypress object.
+    $keypress_obj = App::KeyPress->new(
+        $ver,
+        0 # $debug
+    );
+    $keypress_obj->set_quit_pressed_sub(
+        sub {
+            print "Quit keypressed.\n" if $ver >= 2;
+        }
+    );
+    $keypress_obj->set_return_on_exit( 1 );
+
+
+    my $dirs_conf = load_perl_data( $options->{'conf_fpath'} );
+    return 0 unless defined $dirs_conf;
+    # dumper( '$dirs_conf', $dirs_conf ); my_croak(); # debug
+
+
+    # Testing.
+    if ( 0 ) {
+        my $dconf = $dirs_conf->[0];
+        my $base_dir = $dconf->{src_dir};
+        my $sub_dir = 'subdir6/subdir5A-file';
+
+        my $full_path = catdir( $base_dir, $sub_dir );
+        my $dir_items = load_dir_content( $full_path );
+        exit unless defined $dir_items;
+
+        do_for_rar_file(
+            $dconf,
+            [], # $finish_cmds
+            $base_dir,
+            $sub_dir,
+            'test14.part1.rar', # $file_name,
+            $dir_items
+        );
+        
+        return 1;
+    }
+
+
+    # Main loop.
+    my $last_dconf_num = $#$dirs_conf;
+    foreach my $dconf_num ( 0..$last_dconf_num ) {
+        my $dconf = $dirs_conf->[ $dconf_num ];
+
+        # skip if only one selected
+        if ( defined $options->{conf_part} && $dconf->{name} ne $options->{conf_part} ) {
+            print "Skipping configuration $dconf->{name} (only '$options->{conf_part}' selected).\n" if $ver >= 2;
+            next;
+        }
+
+        # Check configuration.
+        if ( $dconf->{basedir_deep} <= 0 ) {
+            print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
+            next;
+        }
+
+        my $state = load_state( $dconf );
+
+        # Cmd 'unrar'.
+        if ( $options->{cmd} eq 'unrar' ) {
+
+            unless ( -d $dconf->{src_dir} ) {
+                print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
+                next;
+            }
+
+            unless ( -d $dconf->{dest_dir} ) {
+                print "Output directory '$dconf->{dest_dir}' doesn't exists.\n" if $ver >= 1;
+                next;
+            }
+            
+            dumper( 'dconf', $dconf ) if $ver >= 5;
+            my $ud_err_code = unrar_dir_start(
+                $state,
+                [], # $undo_cmds
+                [], # $finish_cmds
+                $dconf,
+                '', # $sub_dir
+                0  # $deep
+            );
+
+            # Clean up 'info' part.
+            foreach my $if_name ( keys %{$state->{done}} ) {
+                if ( exists $state->{info}->{ $if_name } ) {
+                    delete $state->{info}->{ $if_name };
+                }
+            }
+            save_state( $state, $dconf );
+
+            if ( $keypress_obj->get_exit_keypressed() ) {
+                if ( $dconf_num < $last_dconf_num ) {
+                    print "Keypress for Quit - skipping next configuration options.\n" if $ver >= 2;
+                }
+                last;
+            }
+
+            dumper( "state for '$dconf->{name}':", $state ) if $ver >= 5;
+
+
+
+        # Cmd 'process_action_file'.
+        } elsif ( $options->{cmd} eq 'process_action_file' ) {
+            foreach my $anum ( 0..$#$action_file_data ) {
+                my $acmd = $action_file_data->[ $anum ];
+                print "Action: '$acmd->{action}'\n";
+            }
+            next;
+
+
+        # Cmd 'refresh_rsync_file'.
+        }elsif ( $options->{cmd} eq 'refresh_rsync_file' ) {
+            save_state( $state, $dconf );
+            next;
+
+        
+        # Cmd 'db_cleanup'.
+        } elsif ( $options->{cmd} eq 'db_cleanup' ) {
+
+            # Upgrade from prev versions.
+            delete $state->{err} if exists $state->{err};
+
+            # Fix old errors.
+            delete $state->{done}->{''} if exists $state->{done}->{''};
+
+            # Clean up data.
+            foreach my $name ( keys %{$state->{done}} ) {
+                if ( exists $state->{info}->{ $name } ) {
+                    delete $state->{info}->{ $name };
+                }
+            }
+
+            save_state( $state, $dconf );
+            next;
+
+                
+        # Cmd 'db_remove_info'.
+        } elsif ( $options->{cmd} eq 'db_remove_info' ) {
+            delete $state->{info} if exists $state->{info};
+            save_state( $state, $dconf );
+            next;
+
+
+        # Cmd 'db_export'.
+        } elsif ( $options->{cmd} eq 'db_export' ) {
+            # Export to other format.
+            if ( $dconf->{state_store_type} eq 'perl' ) {
+                $dconf->{state_store_type} = 'storable';
+                $dconf->{state_fpath} =~ s{\.pl$}{\.db};
+            } else {
+                $dconf->{state_store_type} = 'perl';
+                $dconf->{state_fpath} =~ s{\.db$}{\.pl};
+            }
+            save_state( $state, $dconf );
+            next;
+            
+
+        # Cmd 'db_remove_item'.
+        } elsif ( $options->{cmd} eq 'db_remove_item' ) {
+            # Remove some file from done and info parts.
+            my $item_name = $options->{item_name};
+            dumper( 'old $state', $state ) if $ver >= 6;
+            remove_item_from_state( $state, $item_name );
+            dumper( 'new $state', $state ) if $ver >= 6;
+            save_state( $state, $dconf );
+            next;
+
+
+        # Cmd 'db_remove_dirs_from_src_dir'.
+        } elsif ( $options->{cmd} eq 'db_remove_dirs_from_src_dir' ) {
+
+            # Remove dirs found inside input dir from state:done list.
+            my $items = load_dir_content( $dconf->{src_dir} );
+            # dumper( '$items', $items ) if $ver >= 10;
+
+            foreach my $item ( @$items ) {
+                my $i_path = catfile( $dconf->{src_dir}, $item );
+                next unless -d $i_path;
+                my $full_item_name = '/' . $item;
+                print "full_item_name: '$full_item_name'\n" if $ver >= 10;
+                remove_item_from_state( $state, $full_item_name );
+            }
+
+            save_state( $state, $dconf );
+            next;
+
+        } # end of last cmd
+
+    } # end foreach
+
+    return 1;
+}
+
 
 =head2 my_croak
 
@@ -121,17 +415,20 @@ sub my_croak {
 
 
 
-sub load_config {
-    my ( $conf_fpath ) = @_;
+sub load_perl_data {
+    my ( $fpath ) = @_;
 
-    print "Loadinf config from '$conf_fpath'.\n" if $ver >= 3;
+    print "Loading data from '$fpath'.\n" if $ver >= 4;
     my( $exception, $conf );
     {
         local $@;
-        $conf = do $conf_fpath;
+        $conf = do $fpath;
         $exception = $@;
     }
-    my_croak( $exception ) if $exception;
+    if ( $exception ) {
+        print "Loading data from '$fpath' failed: $exception\n" if $ver >= 2;
+        return undef;
+    }
     return $conf;
 }
 
@@ -427,7 +724,7 @@ sub load_state {
     if ( $dconf->{state_store_type} eq 'storable' ) {
         $state = retrieve( $dconf->{state_fpath} );
     } else {
-        $state = do $dconf->{state_fpath};
+        $state = load_perl_data( $dconf->{state_fpath} );
     }
     return $state;
 }
@@ -1448,170 +1745,14 @@ sub remove_item_from_state {
 }
 
 
-my $dirs_conf = load_config( $conf_fpath );
-# dumper( '$dirs_conf', $dirs_conf ); my_croak(); # debug
 
 
-# debug
-if ( 0 ) {
+my $ret_code = main();
+$keypress_obj->cleanup_before_exit() if defined $keypress_obj;
 
-    my $dconf = $dirs_conf->[0];
-    my $base_dir = $dconf->{src_dir};
-    my $sub_dir = 'subdir6/subdir5A-file';
-
-    my $full_path = catdir( $base_dir, $sub_dir );
-    my $dir_items = load_dir_content( $full_path );
-    exit unless defined $dir_items;
-
-    do_for_rar_file(
-        $dconf,
-        [], # $finish_cmds
-        $base_dir,
-        $sub_dir,
-        'test14.part1.rar', # $file_name,
-        $dir_items
-    );
-    $keypress_obj->cleanup_before_exit();
-    my_croak();
-}
-
-
-my $last_dconf_num = $#$dirs_conf;
-foreach my $dconf_num ( 0..$last_dconf_num ) {
-    my $dconf = $dirs_conf->[ $dconf_num ];
-
-    # skip if only one selected
-    if ( defined $only_dconf_name && $dconf->{name} ne $only_dconf_name ) {
-        print "Skipping configuration $dconf->{name} (!=$only_dconf_name).\n" if $ver >= 2;
-        next;
-    }
-
-    # Check configuration.
-    if ( $dconf->{basedir_deep} <= 0 ) {
-        print "Configuration $dconf->{name} error: 'basedir_deep' must be >= 1.\n" if $ver >= 1;
-        next;
-    }
-
-    my $state = load_state( $dconf );
-
-
-    # ToDo
-    # Special state changes.
-    if ( 0 ) {
-        # Refresh exclude files.
-        if ( 0 ) {
-            save_state( $state, $dconf );
-        }
-
-        # Upgrade format.
-        if ( 0 ) {
-            delete $state->{err} if exists $state->{err};
-            delete $state->{done}->{''} if exists $state->{done}->{''};
-            save_state( $state, $dconf );
-        }
-
-        # Export to other format.
-        if ( 0 ) {
-            if ( $dconf->{state_store_type} eq 'perl' ) {
-                $dconf->{state_store_type} = 'storable';
-                $dconf->{state_fpath} =~ s{\.pl$}{\.db};
-            } else {
-                $dconf->{state_store_type} = 'perl';
-                $dconf->{state_fpath} =~ s{\.db$}{\.pl};
-            }
-            save_state( $state, $dconf );
-        }
-        
-        # Clean up 'info' part.
-        if ( 0 ) {
-            foreach my $name ( keys %{$state->{done}} ) {
-                if ( exists $state->{info}->{ $name } ) {
-                    delete $state->{info}->{ $name };
-                }
-            }
-            save_state( $state, $dconf );
-        }
-
-        # Remove up 'info' part.
-        if ( 0 ) {
-            delete $state->{info};
-            save_state( $state, $dconf );
-        }
-
-        # Remove some file from done and info parts.
-        my $item_name = undef;
-        if ( $item_name ) {
-            dumper( 'old $state', $state ) if $ver >= 6;
-            remove_item_from_state( $state, $item_name );
-            dumper( 'new $state', $state ) if $ver >= 6;
-            save_state( $state, $dconf );
-        }
-
-
-        # Remove dirs found inside input dir from state:done list.
-        if ( 0 ) {
-            my $items = load_dir_content( $dconf->{src_dir} );
-            # dumper( '$items', $items ) if $ver >= 10;
-            foreach my $item ( @$items ) {
-                my $i_path = catfile( $dconf->{src_dir}, $item );
-                next unless -d $i_path;
-                my $full_item_name = '/' . $item;
-                print "full_item_name: '$full_item_name'\n" if $ver >= 10;
-                remove_item_from_state( $state, $full_item_name );
-            }
-            save_state( $state, $dconf );
-        }
-
-
-        # Dump state.
-        if ( 0 ) {
-            dumper( '$state', $state );
-        }
-
-        next;
-    }
-
-
-    unless ( -d $dconf->{src_dir} ) {
-        print "Input directory '$dconf->{src_dir}' doesn't exists.\n" if $ver >= 1;
-        next;
-    }
-
-    unless ( -d $dconf->{dest_dir} ) {
-        print "Output directory '$dconf->{dest_dir}' doesn't exists.\n" if $ver >= 1;
-        next;
-    }
-    
-    dumper( 'dconf', $dconf ) if $ver >= 5;
-    my $ud_err_code = unrar_dir_start(
-        $state,
-        [], # $undo_cmds
-        [], # $finish_cmds
-        $dconf,
-        '', # $sub_dir
-        0  # $deep
-    );
-
-    # Clean up 'info' part.
-    foreach my $if_name ( keys %{$state->{done}} ) {
-        if ( exists $state->{info}->{ $if_name } ) {
-            delete $state->{info}->{ $if_name };
-        }
-    }
-    save_state( $state, $dconf );
-
-    if ( $keypress_obj->get_exit_keypressed() ) {
-        if ( $dconf_num < $last_dconf_num ) {
-            print "Keypress for Quit - skipping next configuration options.\n" if $ver >= 2;
-        }
-        last;
-    }
-
-    dumper( "state for '$dconf->{name}':", $state ) if $ver >= 5;
-
-}
-
-$keypress_obj->cleanup_before_exit();
+# 0 is ok, 1 is error. See Unix style exit codes.
+exit(1) unless $ret_code;
+exit(0);
 
 
 =head1 AUTHOR
