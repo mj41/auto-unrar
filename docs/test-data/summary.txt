@@ -32,22 +32,22 @@ Misssing part num '3' - guessed file name '/subdir04/test9.part3.rar'.
 Misssing part num '6' - guessed file name '/subdir04/test9.part6.rar'.
 Misssing part num '7' - guessed file name '/subdir04/test9.part7.rar'.
 Extracting file '/subdir04/test9.part1.rar' (first of 8 parts).
-Error 3 in extracting from '/mnt/devil/pole2/scripts/unrar/auto-unrar/bin/../../auto-unrar-data/in/subdir04/test9.part1.rar'.
+Error 3 in extracting from '../../auto-unrar/bin/../../auto-unrar-data/in/subdir04/test9.part1.rar'.
 Rar archive extractiong error: 3.
 Misssing part num '2' - guessed file name '/subdir05/subdir5B-rar_error/test11.part2.rar'.
 Extracting file '/subdir05/subdir5B-rar_error/test11.part1.rar' (first of 4 parts).
-Error 3 in extracting from '/mnt/devil/pole2/scripts/unrar/auto-unrar/bin/../../auto-unrar-data/in/subdir05/subdir5B-rar_error/test11.part1.rar'.
+Error 3 in extracting from '../../auto-unrar/bin/../../auto-unrar-data/in/subdir05/subdir5B-rar_error/test11.part1.rar'.
 Rar archive extractiong error: 3.
 Extracting file '/subdir06/subdir6A-rar_ok/test14.part1.rar' (first of 5 parts).
 Misssing part num '4' - guessed file name '/subdir06/subdir6B-rar_error/test15.r02'.
 Extracting file '/subdir06/subdir6B-rar_error/test15.rar' (first of 5 parts).
-Error 3 in extracting from '/mnt/devil/pole2/scripts/unrar/auto-unrar/bin/../../auto-unrar-data/in/subdir06/subdir6B-rar_error/test15.rar'.
+Error 3 in extracting from '../../auto-unrar/bin/../../auto-unrar-data/in/subdir06/subdir6B-rar_error/test15.rar'.
 Rar archive extractiong error: 3.
 Extracting file '/subdir07/test17-file.001' (first of 6 parts).
 Extracting file '/subdir08/test18-file.part1.rar' (first of 3 parts).
 Misssing part num '2' - guessed file name '/subdir08/test19-file.part2.rar'.
 Extracting file '/subdir08/test19-file.part1.rar' (first of 3 parts).
-Error 3 in extracting from '/mnt/devil/pole2/scripts/unrar/auto-unrar/bin/../../auto-unrar-data/in/subdir08/test19-file.part1.rar'.
+Error 3 in extracting from '../../auto-unrar/bin/../../auto-unrar-data/in/subdir08/test19-file.part1.rar'.
 Rar archive extractiong error: 3.
 Extracting file '/subdir10/ssdA/test27-file.part1.rar' (first of 2 parts).
 Extracting file '/subdir10/ssdA/test28-file.rar'.
