@@ -1379,10 +1379,10 @@ sub process_unrar_dir_ok {
 sub process_unrar_dir_err { 
     my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-        $ud_err_code, $base_dir
+        $ud_err_code, $base_dir, $save_info
     ) = @_;
             
-    if ( $sub_dir ) {
+    if ( $sub_dir && $save_info ) {
         
         # Save state when error occured.
         my $base_info = {
@@ -1555,15 +1555,18 @@ sub unrar_dir {
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed (err code $ud_err_code).\n" if $ver >= 5;
             
+            my $err_is_too_fatal = ( $ud_err_code <= -4 ); # -4, -5, ... Too fatal.
+            
             if ( $deep < $dconf->{basedir_deep} ) {
+                my $save_info = ( ! $err_is_too_fatal );
                 process_unrar_dir_err(
                     $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
-                    $ud_err_code, $base_dir
+                    $ud_err_code, $base_dir, $save_info
                 );
             }
 
             if ( $deep < $dconf->{basedir_deep} ) {
-                return $ud_err_code if $ud_err_code <= -4; # Too fatal.
+                return $ud_err_code if $err_is_too_fatal;
                 next; # Continue to next directory item.
             }
 
@@ -1757,11 +1760,14 @@ sub unrar_dir_start {
        return undef;
     }
 
+    my $err_is_too_fatal = ( $ud_err_code <= -4 ); # -4, -5, ... Too fatal.
+    my $save_info = ( ! $err_is_too_fatal );
+
     # Unrar failed.
     dumper( 'Last $undo_cmds', $undo_cmds ) if $ver >= 4;
     process_unrar_dir_err( 
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
-        $ud_err_code, $base_dir
+        $ud_err_code, $base_dir, $save_info
     );
 
     return $ud_err_code;
