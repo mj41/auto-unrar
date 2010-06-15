@@ -1320,16 +1320,19 @@ sub check_minimum_free_space {
     
     $path = $dconf->{dest_dir} unless defined $path;
     
-    my $df_ref = dfportable( $path, 1024*1024 );
+    my $real_path = readlink( $path );
+    $real_path = $path unless $real_path;
+    
+    my $df_ref = dfportable( $real_path, 1024*1024 );
     unless ( defined $df_ref ) {
-        print "ERROR: Can't determine free space on device for '$path'." if $ver >= 1;
+        print "ERROR: Can't determine free space on device for '$path' (real path '$real_path')." if $ver >= 1;
         return 0;
     }
 
     my $free_MB =  $df_ref->{bfree};
     $free_MB = int( $free_MB + 0.5 );
     if ( $free_MB < $min_fs_MB ) {
-        print "ERROR: There is not required amount of free space ($free_MB MB < $min_fs_MB MB) on device (path '$path').\n" if $ver >= 1;
+        print "ERROR: There is not required amount of free space ($free_MB MB < $min_fs_MB MB) on device (path '$path', real path '$real_path').\n" if $ver >= 1;
         return 0;
     }
 
