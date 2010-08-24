@@ -790,7 +790,12 @@ sub get_item_mtime {
 sub set_dir_mtime {
     my ( $dest_dir_path, $src_mtime ) = @_;
 
-    unless ( utime(time(), $src_mtime, $dest_dir_path) ) {
+    my $act_time = time();
+    
+    # Do not allow time in future.
+    $src_mtime = $act_time if $src_mtime > $act_time;
+    
+    unless ( utime($act_time, $src_mtime, $dest_dir_path) ) {
         print "Command utime for '$dest_dir_path' failed: $^E\n" if $ver >= 1;
         return 0;
     }
@@ -1749,7 +1754,7 @@ sub unrar_dir_start {
 
     my $base_dir = $dconf->{src_dir};
  
-     # Unrar ok.
+    # Unrar ok.
     unless ( defined $ud_err_code ) {
         dumper( 'Last $finish_cmds', $finish_cmds ) if $ver >= 4;
         process_unrar_dir_ok( 
