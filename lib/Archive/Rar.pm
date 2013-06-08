@@ -49,7 +49,7 @@ sub IsEmpty {
 #
 #
 sub CleanDir {
-    $_[0] =~ s|\\|/|g   if $IsWindows;
+    $_[0] =~ s|\\|/|g if $IsWindows;
     $_[0] =~ s|/+|/|g;
     $_[0] =~ s|/$||g;
     $_[0] =~ s|:$|:/\.| if $IsWindows;
@@ -113,7 +113,7 @@ sub TestExe {
 #
 #
 sub SearchExe {
-    my $self  = shift;
+    my $self = shift;
     my $cmd = 'rar';
 
     if ( $IsWindows ) {
@@ -172,9 +172,9 @@ sub SearchExe {
 #
 #
 sub initialize {
-    my $self     = shift;
+    my $self = shift;
     my %params = @_;
-    my %args   = (
+    my %args = (
         -yes     => 1,
         -recurse => 1,
         -mode    => 5,
@@ -200,7 +200,7 @@ sub initialize {
 #
 sub SetOptions {
     my ( %args, $self, $command, %opts, $s, @exclude, %params, $key, $value );
-    $self      = shift;
+    $self = shift;
     $command = shift;
     %args    = %{ $self->{args} };
     %params  = @_;
@@ -382,7 +382,7 @@ sub _AddToList {
 sub List {
     my $self = shift;
 
-    $self->{list}    = undef;
+    $self->{list} = undef;
     $self->{command} = '"vt"';
     $self->SetOptions( $self->{command}, @_ );
 
@@ -421,7 +421,7 @@ sub List {
         
         if ( ! $in ) {
             if ( $part_num == 3 && $part_line_num == 1 ) {
-                my ( $volume ) = $line  =~ /(\d+)$/;
+                my ( $volume ) = $line =~ /(\d+)$/;
                 $self->{info}->{volume} = $volume;
             }
             next;
@@ -509,7 +509,7 @@ sub GetBareList {
 #
 sub GetHelp {
     my ( $self, %args, $res );
-    $self                 = shift;
+    $self = shift;
     $args{'-verbose'}     = 1;
     $args{'-getoutput'}   = 1;
     $self->{current}      = \%args;
