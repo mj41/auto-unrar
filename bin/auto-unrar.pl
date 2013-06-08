@@ -36,8 +36,8 @@ use File::stat;
 
 use Storable;
 use Data::Dumper;
-use Digest::SHA1;
-use Filesys::DfPortable;
+use Digest::SHA;
+use Filesys::Df;
 
 use lib "$FindBin::Bin/../lib";
 use App::KeyPress;
@@ -636,7 +636,7 @@ sub get_content_info_and_hash {
         map { $hash_str .= '|' . $_ . '|' . $item_info->{$_} } sort keys %$item_info;
         $hash_str .= '|';
     }
-    my $hash = Digest::SHA1::sha1_hex( $hash_str );
+    my $hash = Digest::SHA::sha1_hex( $hash_str );
     return ( $info, $hash );
 }
 
@@ -1297,7 +1297,7 @@ sub check_minimum_free_space {
     my $real_path = readlink( $path );
     $real_path = $path unless $real_path;
 
-    my $df_ref = dfportable( $real_path, 1024*1024 );
+    my $df_ref = df( $real_path, 1024*1024 );
     unless ( defined $df_ref ) {
         print "ERROR: Can't determine free space on device for '$path' (real path '$real_path')." if $ver >= 1;
         return 0;
