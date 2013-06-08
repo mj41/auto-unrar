@@ -1,0 +1,3 @@
+# Rsync exclude file (temp/test-data/rsync-exclude-list.txt) before auto-unrar run:
+
+

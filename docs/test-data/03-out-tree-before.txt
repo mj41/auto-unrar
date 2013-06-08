@@ -1,0 +1,5 @@
+# Input tree of 'src_dir' (temp/test-data/out/) before auto-unrar run:
+
+temp/test-data/out/
+
+0 directories, 0 files

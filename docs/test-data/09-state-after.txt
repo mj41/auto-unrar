@@ -1,0 +1,331 @@
+# State file (temp/test-data/state.pl) after auto-unrar run:
+
+{
+  'done' => {
+    '/subdir01-ok' => 1370725947,
+    '/subdir02-ok' => 1370725947,
+    '/subdir03-ok' => 1370725947,
+    '/subdir07-ok' => 1370725948,
+    '/subdir10-ok' => 1370725948,
+    '/subdir11-ok' => 1370725948,
+    '/subdir12-ok' => 1370725948,
+    '/test0-ok.txt' => 1370725948
+  },
+  'info' => {
+    '/subdir04-err' => [
+      {
+        'content' => [
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test8.txt',
+            'size' => 17
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test9.part1.rar',
+            'size' => 1634
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test9.part2.rar',
+            'size' => 1634
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test9.part4.rar',
+            'size' => 1634
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test9.part5.rar',
+            'size' => 1634
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir04-err/test9.part8.rar',
+            'size' => 864
+          }
+        ],
+        'content_meta_hash' => '31613c50411f7b3a02fd78057a7c88a8c6dcf8eb',
+        'error' => 1,
+        'error_info' => {
+          'err_code' => -3,
+          'type' => 'rar'
+        },
+        'time' => 1370725948
+      }
+    ],
+    '/subdir05-err' => [
+      {
+        'content' => [
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err'
+          },
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5A-file'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5A-file/test10.txt',
+            'size' => 18
+          },
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5B-rar_error'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5B-rar_error/test11.part1.rar',
+            'size' => 10000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5B-rar_error/test11.part3.rar',
+            'size' => 10000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/subdir5B-rar_error/test11.part4.rar',
+            'size' => 1042
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir05-err/test12.txt',
+            'size' => 18
+          }
+        ],
+        'content_meta_hash' => '23f31de45633e4470379ebeb48ba60f6a722f783',
+        'error' => 1,
+        'error_info' => {
+          'err_code' => -3,
+          'type' => 'rar'
+        },
+        'time' => 1370725948
+      }
+    ],
+    '/subdir06-err' => [
+      {
+        'content' => [
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err'
+          },
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test13.txt',
+            'size' => 18
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test14.part1.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test14.part2.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test14.part3.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test14.part4.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6A-rar_ok/test14.part5.rar',
+            'size' => 339
+          },
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6B-rar_error'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6B-rar_error/test15.r00',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6B-rar_error/test15.r01',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6B-rar_error/test15.r03',
+            'size' => 339
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6B-rar_error/test15.rar',
+            'size' => 1000
+          },
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6D-file'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir06-err/subdir6D-file/test16.txt',
+            'size' => 18
+          }
+        ],
+        'content_meta_hash' => '09f129dead3b0461114f7ec81a2e213e2db12a06',
+        'error' => 1,
+        'error_info' => {
+          'err_code' => -3,
+          'type' => 'rar'
+        },
+        'time' => 1370725948
+      }
+    ],
+    '/subdir08-err' => [
+      {
+        'content' => [
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test18-file.part1.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test18-file.part2.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test18-file.part3.rar',
+            'size' => 480
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test19-file.part1.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test19-file.part3.rar',
+            'size' => 480
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test20-file.r00',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test20-file.r01',
+            'size' => 480
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test20-file.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test21-file.r01',
+            'size' => 480
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test21-file.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test22-file.001',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test22-file.002',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test22-file.003',
+            'size' => 480
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test23-file.001',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir08-err/test23-file.003',
+            'size' => 480
+          }
+        ],
+        'content_meta_hash' => 'ce251857eac6951665e0298a0afae8e94af01f49',
+        'error' => 1,
+        'error_info' => {
+          'err_code' => -3,
+          'type' => 'rar'
+        },
+        'time' => 1370725948
+      }
+    ],
+    '/subdir09-err' => [
+      {
+        'content' => [
+          {
+            'is_dir' => 1,
+            'mtime' => 1370520441,
+            'path' => '/subdir09-err'
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir09-err/test24-file.part3.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir09-err/test24-file.part4.rar',
+            'size' => 1000
+          },
+          {
+            'mtime' => 1370520441,
+            'path' => '/subdir09-err/test24-file.part6.rar',
+            'size' => 105
+          }
+        ],
+        'content_meta_hash' => '4f9ae53969eb70dba8b2e5536799838b67c14326',
+        'error' => 1,
+        'error_info' => {
+          'err_code' => -3,
+          'type' => 'rar'
+        },
+        'time' => 1370725948
+      }
+    ]
+  }
+}

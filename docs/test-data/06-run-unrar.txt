@@ -1,0 +1,38 @@
+Extracting file '/subdir01-ok/test1.rar'.
+Extracting file '/subdir01-ok/test2.rar'.
+Extracting file '/subdir02-ok/subdir2b/test3.rar'.
+Extracting file '/subdir02-ok/subdir2b/test4.rar'.
+Extracting file '/subdir02-ok/test5arch.part1.rar' (first of 5 parts).
+Extracting file '/subdir03-ok/test6-dir - spaces.rar'.
+Extracting file '/subdir03-ok/test7-dir.rar' (first of 28 parts).
+Misssing part num '3' - guessed file name '/subdir04-err/test9.part3.rar'.
+Misssing part num '6' - guessed file name '/subdir04-err/test9.part6.rar'.
+Misssing part num '7' - guessed file name '/subdir04-err/test9.part7.rar'.
+Extracting file '/subdir04-err/test9.part1.rar' (first of 8 parts).
+Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir04-err/test9.part1.rar'.
+Rar archive extractiong error: 3.
+Misssing part num '2' - guessed file name '/subdir05-err/subdir5B-rar_error/test11.part2.rar'.
+Extracting file '/subdir05-err/subdir5B-rar_error/test11.part1.rar' (first of 4 parts).
+Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir05-err/subdir5B-rar_error/test11.part1.rar'.
+Rar archive extractiong error: 3.
+Directory '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir05-err/subdir5A-file' not open for read.
+Extracting file '/subdir06-err/subdir6A-rar_ok/test14.part1.rar' (first of 5 parts).
+Misssing part num '4' - guessed file name '/subdir06-err/subdir6B-rar_error/test15.r02'.
+Extracting file '/subdir06-err/subdir6B-rar_error/test15.rar' (first of 5 parts).
+Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir06-err/subdir6B-rar_error/test15.rar'.
+Rar archive extractiong error: 3.
+Extracting file '/subdir07-ok/test17-file.001' (first of 6 parts).
+Extracting file '/subdir08-err/test18-file.part1.rar' (first of 3 parts).
+Misssing part num '2' - guessed file name '/subdir08-err/test19-file.part2.rar'.
+Extracting file '/subdir08-err/test19-file.part1.rar' (first of 3 parts).
+Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir08-err/test19-file.part1.rar'.
+Rar archive extractiong error: 3.
+Directory '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir09-err' not open for read.
+Extracting file '/subdir10-ok/ssdA/test27-file.part1.rar' (first of 2 parts).
+Extracting file '/subdir10-ok/ssdA/test28-file.rar'.
+Extracting file '/subdir10-ok/ssdB/test30-file.rar'.
+Extracting file '/subdir10-ok/ssdB/test32-file.part1.rar' (first of 2 parts).
+Extracting file '/subdir10-ok/ssdC/test33-file.part1.rar' (first of 2 parts).
+Extracting file '/subdir10-ok/ssdC/test34-file.part1.rar' (first of 2 parts).
+Extracting file '/subdir11-ok/test38-file.part001.rar' (first of 2 parts).
+Extracting file '/subdir11-ok/test38-file.part002.part1.rar' (first of 2 parts).

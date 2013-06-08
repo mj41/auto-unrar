@@ -1,0 +1,10 @@
+# Rsync exclude file (temp/test-data/rsync-exclude-list.txt) after auto-unrar run:
+
+- /subdir01-ok
+- /subdir02-ok
+- /subdir03-ok
+- /subdir07-ok
+- /subdir10-ok
+- /subdir11-ok
+- /subdir12-ok
+- /test0-ok.txt
