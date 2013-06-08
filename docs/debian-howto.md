@@ -1,14 +1,12 @@
-UNRAR
-=====
+auto-unrar Debian HowTo
+=======================
 
-UnRar script for Debian(and other linux distributions..)
+UnRar script for Debian (and other Linux distributions).
 
-So first of all hello, 
 This is a tutorial how to use https://github.com/mj41/auto-unrar this unrar script with the newest debian.
-Remember not to get files from there since they are outdated and aren't working correctly.
-It took me several hours to fix the errors so I wouldn't recommend finding them yourself xD.
 
------------------------------------------ Installing and configuration -----------------------------------------
+Installing and configuration
+----------------------------
 
 1. Install perl or make sure you have perl
  - sudo apt-get install perl
@@ -39,7 +37,8 @@ It took me several hours to fix the errors so I wouldn't recommend finding them 
   - save_ok_info, logging all the normal info, just leave it untouched..
   - save_err_info, logging all the error info, just leave it untouched..
 
------------------------------------------ RUNNING -----------------------------------------
+Running
+-------
 
 13. Run the unrar2.pl file.
   - if you have any errors be sure to google and if it doesn't work the changes are high I won't know it either so try a forum..
@@ -49,9 +48,11 @@ It took me several hours to fix the errors so I wouldn't recommend finding them 
 14. Create the run command
   - perl "absolute path to unrar2.pl" --conf="absolute path to config file" --cmd=unrar
   - perl /home/user/unrar/unrar2.pl --conf="/home/user/unrar/conf/unrar-data-conf.pl" --cmd=unrar
-  
 
------------------------------------------ SCHEDULING -----------------------------------------
+
+Scheduling
+----------
+
 Since you use debian you can use scheduling.
 Crontab is explained here: https://help.ubuntu.com/community/CronHowto , it is for all linux distributions.
 15. Enter this in ssh: "sudo crontab -e"

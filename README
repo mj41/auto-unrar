@@ -37,6 +37,8 @@ http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 
 === Install ===
 
+For Debian see docs/debian-howto.md
+
 git clone git://github.com/mj41/auto-unrar-win.git auto-unrar
 cd auto-unrar
 cpan Term::ReadKey
