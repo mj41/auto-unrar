@@ -1,6 +1,6 @@
 Smart Perl scripts (for Linux and Windows) to auto unrar/extract a directory structure containing many RAR archives.
 
-== bin/unrar2.pl (for Linux) ==
+== bin/unrar.pl (for Linux) ==
 
 Smart extracting of many RAR archives for Linux.
 
@@ -10,7 +10,7 @@ Features:
 ** .part1.rar, .part2.rar, ...
 ** .rar, .r00, .r01, ...
 ** .001, .002, ...
-* duplicate directory structure tree 
+* duplicate directory structure tree
 ** respect basedir_deep configuration option
 ** see http://bit.ly/dafLxF ( docs/test-data/summary.txt )
 * move/rename normal files (no rar archives)
@@ -20,12 +20,12 @@ Features:
 ** so already extracted archives aren't extracted again
 ** trying extract again only if some change found
 * keypress features during run ( p...pause, c...continue, q...quit )
-* smart error handling 
+* smart error handling
 ** maintain undo actions list for recovery to initial state
 ** sleep (increment time to sleep) and try again
 ** revert to initial state if error found during extraction of directory
 * can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives
-** check if there is any change inside direcotory
+** check if there is any change inside directory
 * support for rsync integration
 ** generate rsync exclude list (basedir_deep configuration option is used)
 ** check time of last modification of base directories (recursively)
@@ -33,11 +33,14 @@ Features:
 * preserve mtime of files and directories where possible
 * has own test suite
 * tested on many big archives
-* debug and verbose support
+* debug and verbose output support
 
-Tested on Linux only. Also see ToDo list inside source code 
+Tested on Linux only. Also see ToDo list inside source code
 http://github.com/mj41/auto-unrar/blob/master/bin/unrar2.pl .
 
+=== Install ===
+
+cpan Filesys::DfPortable
 
 == bin/unrar.pl (for Windows) ==
 
@@ -74,12 +77,10 @@ Press:
 * C .. continue,
 * Q .. quit.
 
-
 == Future development and donations ==
-Ping me (mj41) on irc://irc.freenode.org/perl6.cz or au@mj41.cz . 
+
+Ping me (mj41) on irc://irc.freenode.org/perl6.cz or write to au@mj41.cz .
 We can discuss bugs and feature requests.
 
-Feel free to donate some money to support development on 
+Feel free to donate some money to support development on
 http://pledgie.com/campaigns/9585 . Thank you.
-
-
