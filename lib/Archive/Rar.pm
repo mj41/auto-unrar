@@ -4,7 +4,7 @@ require 5.004;
 
 use strict;
 use vars ('$VERSION');
-$VERSION = '2.02';
+$VERSION = '2.02'; # with mj41 changes
 
 use Data::Dumper;
 use Cwd;
