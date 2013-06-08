@@ -40,15 +40,15 @@ http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 For Debian see docs/debian-howto.md
 
 cd ~/
-git clone git://github.com/mj41/auto-unrar-win.git auto-unrar
+git clone git://github.com/mj41/auto-unrar.git auto-unrar
 cd auto-unrar
 mkdir -p temp
 mkdir -p conf-my
 mkdir -p db
-cp conf/videos-example.pl conf-my
+cp conf/videos-example.pl conf-my/
 cpan Term::ReadKey
 cpan YAML::Any
-cpan Filesys::DfPortable
+cpan Filesys::Df
 
 === Run ===
 
@@ -62,7 +62,7 @@ Press:
 
 == Future development and donations ==
 
-Ping me (mj41) on irc://irc.freenode.org/perl6.cz or write to au@mj41.cz .
+Ping me (mj41) on irc://irc.freenode.org/auto-unrar or write to au@mj41.cz .
 We can discuss bugs and feature requests.
 
 Feel free to donate some money to support development on
