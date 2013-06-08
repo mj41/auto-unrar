@@ -17,11 +17,11 @@ return [
         # Directory where all unpacked files/directories will be.
         dest_dir => catdir( $home_dir, 'videos' ),
         # Path to file where auto-unrar has state file.
-        state_fpath  => catdir( $RealBin, '..', 'db', $name.'-data.pl' ),
+        state_fpath  => catfile( $RealBin, '..', 'db', $name.'-data.pl' ),
         # Path where exclude list for rsync will be generated. You can rsync new videos to 'src_dir'.
         # After extraction (if option 'remove_done' is true) input rars are removed from 'src_dir'.
         # You can use exclude list for rsync to skip these already rsynced and extracted directories.
-        exclude_list => catdir( $RealBin, '..', 'db', $name.'-rsync-exclude.txt' ),
+        exclude_list => catdfile( $RealBin, '..', 'db', $name.'-rsync-exclude.txt' ),
         # Minimum space on your disc before extraction start.
         minimum_free_space => '2000', # MB
         # Recurse into directories (or not).

@@ -2,12 +2,12 @@ my $base_dir = catdir( $RealBin, '..', 'temp', 'test-data' );
 return [
     {
         name => 'data',
-        src_dir      => catdir( $base_dir, 'in'  ),
-        dest_dir     => catdir( $base_dir, 'out' ),
-        state_fpath  => catfile( $base_dir, 'unrar-data.pl' ),
-        exclude_list => catfile( $base_dir, 'unrar-data-rsync-exclude.txt' ),
-        minimum_free_space => '100', # MB
+        src_dir => catdir( $base_dir, 'in'  ),
         basedir_deep => 1,
+        dest_dir => catdir( $base_dir, 'out' ),
+        state_fpath => catfile( $base_dir, 'state.pl' ),
+        exclude_list => catfile( $base_dir, 'rsync-exclude-list.txt' ),
+        minimum_free_space => '500', # MB
         recursive => 1,
         remove_done => 1,
         move_non_rars => 1,
