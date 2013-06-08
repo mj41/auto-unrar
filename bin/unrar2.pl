@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 
-
 =head1 NAME
 
 auto-unrar
@@ -20,7 +19,7 @@ auto-unrar
 * refactor to Perl package
 * use do_cmd_sub inside do_cmds ?
 
-=cut 
+=cut
 
 
 use Carp qw(carp croak verbose);
@@ -53,7 +52,7 @@ perl unrar2.pl [options]
 
  Options:
     --help ... Prints this help informations.
-    
+
     --ver=$NUM ... Verbosity level 0..10 Default 2.
 
     --conf=?
@@ -63,16 +62,16 @@ perl unrar2.pl [options]
     --conf_part=?
     --conf_part=mydir1
         Process command only for given config part name.
-        
+
     --cmd=? ... See availible commands below:
 
     --cmd=unrar
         Unrar/process all directories from configuration file.
-    
+
     --cmd=process_action_file --action_fpath=$PATH
     --cmd=process_action_file --action_fpath=../conf/clear-done-list.pl
         Process action file. E.g. edit/clear auto-unrar database.
-    
+
     --cmd=db_cleanup
         Clean up, upgrade and fix db files.
 
@@ -93,7 +92,7 @@ perl unrar2.pl [options]
         Remove all directories found in source directory from db file. After this
         auto-unrar will process all directories inside source dir again.
 
-=cut 
+=cut
 
 # Global variables.
 
@@ -107,7 +106,7 @@ my $src_dir_mtimes = {};
 =head1 DESCRIPTION
 
 B<This program> run auto-unrar utility. Smart extracting or RAR archives while
-respect/dumplicate directory structure. 
+respect/dumplicate directory structure.
 
 =head1 METHODS
 
@@ -115,7 +114,7 @@ respect/dumplicate directory structure.
 
 Parse command line options and run commands.
 
-=cut 
+=cut
 
 sub main {
 
@@ -128,7 +127,7 @@ sub main {
         only_conf_part => undef,
         cmd => undef,
    };
-   
+
     my $conf_fpath = $ARGV[0];
 
     my $options_ok = GetOptions(
@@ -137,7 +136,7 @@ sub main {
         'conf=s' => \$options->{'conf_fpath'},
         'conf_part=s' => \$options->{'only_conf_part'},
         'cmd=s' => \$options->{'cmd'},
-        
+
         'action_fpath=s' => \$options->{'action_fpath'},
         'item_name=s' => \$options->{'item_name'},
     );
@@ -147,7 +146,7 @@ sub main {
         return 0 unless $options_ok;
         return 1;
     }
-    
+
     # Set global variables.
     $ver = $options->{ver};
 
@@ -174,7 +173,7 @@ sub main {
         return 0;
     }
 
-    
+
     # Prepare/check 'process_action_file' cmd variables.
     my $action_file_data = undef;
     if ( $options->{cmd} eq 'process_action_file' ) {
@@ -188,7 +187,7 @@ sub main {
             print "Action file '$options->{action_fpath}' not found.\n" if $ver >= 1;
             return 0;
         }
-        
+
 
         $action_file_data = load_perl_data( $options->{action_fpath} );
         if ( (not $action_file_data) || ref $action_file_data ne 'ARRAY'  ) {
@@ -240,7 +239,7 @@ sub main {
             'test14.part1.rar', # $file_name,
             $dir_items
         );
-        
+
         return 1;
     }
 
@@ -276,7 +275,7 @@ sub main {
                 print "Output directory '$dconf->{dest_dir}' doesn't exists.\n" if $ver >= 1;
                 next DCONF;
             }
-            
+
             dumper( 'dconf', $dconf ) if $ver >= 5;
             my $ud_err_code = unrar_dir_start(
                 $state,
@@ -317,21 +316,21 @@ sub main {
                     foreach my $w_key ( keys %$where ) {
                         my $w_value = $where->{$w_key};
                         print "Key '$w_key', value '$w_value'\n" if $ver >= 10;
-                        
+
                         if ( not exists $dconf->{$w_key} ) {
                             print "Unknown configuration key '$w_key'\n" if $ver >= 2;
                             next ADATA;
-                        
+
                         } elsif ( $dconf->{$w_key} ne $w_value ) {
                             print "Configuration key '$w_key' has value '$dconf->{$w_key}' != '$w_value'.\n" if $ver >= 10;
                             next ADATA;
                         }
                     }
-                    
+
                     print "Where condition fulfilled.\n" if $ver >= 4;
                 }
 
-                
+
                 if ( $acmd->{action} eq 'remove_from_done_list' ) {
                     unless ( exists $acmd->{what} ) {
                         print "What part not found in action file.\n" if $ver >= 2;
@@ -341,11 +340,11 @@ sub main {
                         print "Going to remove item '$item_name'\n" if $ver >= 10;
                         remove_item_from_state( $state, $item_name );
                     }
-                    
+
                 } else {
                     print "Unknown action '$acmd->{action}'.\n" if $ver >= 2;
                 }
-                
+
             }
 
             save_state( $state, $dconf );
@@ -357,7 +356,7 @@ sub main {
             save_state( $state, $dconf );
             next DCONF;
 
-        
+
         # Cmd 'db_cleanup'.
         } elsif ( $options->{cmd} eq 'db_cleanup' ) {
 
@@ -377,7 +376,7 @@ sub main {
             save_state( $state, $dconf );
             next DCONF;
 
-                
+
         # Cmd 'db_remove_info'.
         } elsif ( $options->{cmd} eq 'db_remove_info' ) {
             delete $state->{info} if exists $state->{info};
@@ -397,7 +396,7 @@ sub main {
             }
             save_state( $state, $dconf );
             next DCONF;
-            
+
 
         # Cmd 'db_remove_item'.
         } elsif ( $options->{cmd} eq 'db_remove_item' ) {
@@ -440,15 +439,13 @@ sub main {
 
 Do clean up before croak with given message.
 
-=cut 
+=cut
 
 sub my_croak {
     my ( $err_msg ) = @_;
     $keypress_obj->cleanup_before_exit();
     croak $err_msg;
 }
-
-
 
 sub load_perl_data {
     my ( $fpath ) = @_;
@@ -466,7 +463,6 @@ sub load_perl_data {
     }
     return $conf;
 }
-
 
 sub debug_suffix {
     my ( $msg, $caller_back ) = @_;
@@ -489,7 +485,6 @@ sub debug_suffix {
     $msg .= "\n" if $has_new_line;
     return $msg;
 }
-
 
 sub dumper {
     my ( $prefix_text, $data, $caller_back ) = @_;
@@ -525,7 +520,6 @@ sub dumper {
     return 1;
 }
 
-
 sub load_dir_content {
     my ( $dir_name ) = @_;
 
@@ -550,7 +544,6 @@ sub load_dir_content {
     return $items;
 }
 
-
 sub do_cmd_sub {
     my ( $cmd_sub, $msg ) = @_;
 
@@ -559,7 +552,7 @@ sub do_cmd_sub {
     my $sleep_time = 1;
     while ( not $done_ok ) {
         my $ret_val = $cmd_sub->();
-        
+
         $out_data = undef;
         if ( ref $ret_val ) {
             ( $done_ok, $out_data ) = @$ret_val;
@@ -585,7 +578,6 @@ sub do_cmd_sub {
     return $out_data;
 }
 
-
 sub get_item_info {
     my ( $base_path, $item_sub_path ) = @_;
 
@@ -604,7 +596,6 @@ sub get_item_info {
     }
     return $info;
 }
-
 
 sub get_rec_content_info {
     my ( $info, $base_path, $item_sub_path ) = @_;
@@ -631,7 +622,6 @@ sub get_rec_content_info {
     return 1;
 }
 
-
 sub get_content_info_and_hash {
     my ( $base_path, $item_sub_path ) = @_;
 
@@ -648,12 +638,11 @@ sub get_content_info_and_hash {
     return ( $info, $hash );
 }
 
-
 sub save_item_rec_content_info {
     my ( $state, $dconf, $base_path, $item_sub_path, $info, $save_content_info ) = @_;
-    
+
     return 1 unless $item_sub_path;
-    
+
     $info = {} unless defined $info;
 
     my ( $content_info, $hash ) = get_content_info_and_hash( $base_path, $item_sub_path );
@@ -669,14 +658,13 @@ sub save_item_rec_content_info {
     return save_state( $state, $dconf );
 }
 
-
 sub save_item_done {
     my ( $state, $dconf, $item_name ) = @_;
 
     if ( defined $item_name && $item_name ) {
         $state->{done}->{$item_name} = time();
     }
-    
+
     my $state_store_type = $dconf->{state_store_type};
     if ( $state_store_type eq 'storable' ) {
         do_cmd_sub(
@@ -690,7 +678,7 @@ sub save_item_done {
         my $state_dump_code = $dumper_obj->Dump;
 
         do_cmd_sub(
-            sub { 
+            sub {
                 my $fh;
                 open( $fh, '>', $dconf->{state_fpath} ) or return ( 0, $! );
                 print $fh $state_dump_code;
@@ -733,12 +721,10 @@ sub save_item_done {
     return 1;
 }
 
-
 sub save_state {
     my ( $state, $dconf ) = @_;
     return save_item_done( $state, $dconf, undef );
 }
-
 
 sub load_state {
     my ( $dconf ) = @_;
@@ -748,7 +734,7 @@ sub load_state {
         $state_store_type = 'perl';
     }
     $dconf->{state_store_type} = $state_store_type;
-    
+
     unless ( -e $dconf->{state_fpath} ) {
         return {
             'done' => {},
@@ -764,7 +750,6 @@ sub load_state {
     return $state;
 }
 
-
 sub get_item_stat_obj {
     my ( $path ) = @_;
 
@@ -776,7 +761,6 @@ sub get_item_stat_obj {
     return $stat_obj;
 }
 
-
 sub get_item_mtime {
     my ( $path ) = @_;
 
@@ -786,15 +770,14 @@ sub get_item_mtime {
     return $stat_obj->mtime;
 }
 
-
 sub set_dir_mtime {
     my ( $dest_dir_path, $src_mtime ) = @_;
 
     my $act_time = time();
-    
+
     # Do not allow time in future.
     $src_mtime = $act_time if $src_mtime > $act_time;
-    
+
     unless ( utime($act_time, $src_mtime, $dest_dir_path) ) {
         print "Command utime for '$dest_dir_path' failed: $^E\n" if $ver >= 1;
         return 0;
@@ -803,7 +786,6 @@ sub set_dir_mtime {
     print "Finished setting '$dest_dir_path' mtime to " . (localtime $src_mtime) . "\n" if $ver >= 8;
     return 1;
 }
-    
 
 sub set_saved_dir_mtime {
     my ( $dest_dir_path, $src_dir_part ) = @_;
@@ -812,20 +794,18 @@ sub set_saved_dir_mtime {
         print "Error: Saved mtime for dir '$src_dir_part' not found.\n" if $ver >= 3;
         return 0;
     }
-    
+
     return set_dir_mtime( $dest_dir_path, $src_dir_mtimes->{ $src_dir_part } );
 }
 
-    
 sub copy_dir_mtime {
     my ( $dest_dir_path, $src_dir_path ) = @_;
-    
+
     my $src_mtime = get_item_mtime( $src_dir_path );
     return 0 unless defined $src_mtime;
 
     return set_dir_mtime( $dest_dir_path, $src_mtime );
 }
-
 
 sub mkdir_copy_mtime {
     my ( $dest_dir_path, $src_dir_path ) = @_;
@@ -841,7 +821,6 @@ sub mkdir_copy_mtime {
 
     return copy_dir_mtime( $dest_dir_path, $src_dir_path );
 }
-
 
 sub mkpath_copy_mtime {
     my ( $dest_base_dir, $src_base_dir, $sub_dirs ) = @_;
@@ -873,10 +852,8 @@ sub mkpath_copy_mtime {
         $tmp_src_dir = catdir( $tmp_src_dir, $dir );
         return 0 unless mkdir_copy_mtime( $tmp_dest_dir, $tmp_src_dir );
     }
-
     return 1;
 }
-
 
 sub do_for_dir {
     my ( $dconf, $finish_cmds, $undo_cmds, $base_dir, $sub_dir ) = @_;
@@ -888,7 +865,6 @@ sub do_for_dir {
 
     return 1;
 }
-
 
 sub do_for_rar_file {
     my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $file_name, $dir_items ) = @_;
@@ -903,7 +879,7 @@ sub do_for_rar_file {
     if ( $file_name =~ /^(.*)\.part(\d+)\.rar$/ ) {
         my $tmp_base_name_part = $1;
         my $tmp_part_num = $2;
-        
+
         # See test/subdir11.
         my $mr_type_found = 0;
         NEXT_FILE: foreach my $next_file_name ( sort @$dir_items ) {
@@ -912,7 +888,7 @@ sub do_for_rar_file {
                 last;
             }
         }
-        
+
         if ( not $mr_type_found ) {
             $base_name_part = $tmp_base_name_part;
             $part_num = $tmp_part_num;
@@ -921,7 +897,7 @@ sub do_for_rar_file {
             $multipart_type = 'part';
         }
     }
-    
+
     if ( defined $multipart_type ) {
         # Is 'part' type.
 
@@ -949,14 +925,12 @@ sub do_for_rar_file {
         $multipart_type = 'unsup';
     }
 
-    return ( 0, "File isn't rar archive.", undef, undef ) unless $is_rar_archive;
-
-    
-
-    return ( 1, "File is part of multiparts archive (type $multipart_type), but isn't first part.", undef, undef ) if $multipart_type && ($part_num != 1);
-
-    return -1 unless mkpath_copy_mtime( $dconf->{dest_dir}, $base_dir, $sub_dir );
-
+    return ( 0, "File isn't rar archive.", undef, undef )
+		unless $is_rar_archive;
+    return ( 1, "File is part of multiparts archive (type $multipart_type), but isn't first part.", undef, undef )
+		if $multipart_type && ($part_num != 1);
+    return -1
+		unless mkpath_copy_mtime( $dconf->{dest_dir}, $base_dir, $sub_dir );
 
     my $dest_dir = catdir( $dconf->{dest_dir}, $sub_dir );
     my $file_sub_path = catfile( $sub_dir, $file_name );
@@ -992,7 +966,7 @@ sub do_for_rar_file {
 
         my $other_part_num = undef;
         my $other_part_num_str_length = undef;
-        
+
         if ( $multipart_type eq 'part' ) {
             if ( $next_file_name =~ /^\Q$base_name_part\E\.part(\d+)\.rar$/ ) {
                 $other_part_num = $1;
@@ -1014,9 +988,9 @@ sub do_for_rar_file {
                 $other_part_num_str_length = length( $1 );
             }
         }
-        
+
         next unless defined $other_part_num;
-        
+
         if ( defined $part_num_str_length ) {
             if ( $other_part_num_str_length != $part_num_str_length ) {
                 print "Error: Found other_part_num $other_part_num with length $other_part_num_str_length which isn't same as base part length $part_num_str_length.\n" if $ver >= 2;
@@ -1028,7 +1002,7 @@ sub do_for_rar_file {
             print "Error: Found other_part_num $other_part_num same as part_num $part_num.\n" if $ver >= 2;
             next;
         }
-        
+
         $other_part_found = 1;
 
         print "Other rar part added '$next_file_name' ($other_part_num) for base_name '$base_name_part' and type '$multipart_type'.\n" if $ver >= 5;
@@ -1067,10 +1041,10 @@ sub do_for_rar_file {
         foreach my $num ( 0..$#rar_parts_list ) {
             my $t_pfname = $rar_parts_list[ $num ];
             next if defined $t_pfname;
-            
+
             $found_missing_part = 1;
             my $t_pnum = $num + 1;
-            
+
             my $exp_file_name = 'unknown';
             if ( $multipart_type eq 'part' ) {
                 my $other_part_num = $t_pnum;
@@ -1084,7 +1058,7 @@ sub do_for_rar_file {
                 my $other_part_num = $t_pnum;
                 $exp_file_name = $base_name_part . '.' . sprintf( $num_sprintf_format, $other_part_num );
             }
-            
+
             my $ex_file_path = catfile( $sub_dir, $exp_file_name );
             print "Misssing part num '" . $t_pnum . "' - guessed file name '$ex_file_path'.\n" if $ver >= 2;
         }
@@ -1110,7 +1084,6 @@ sub do_for_rar_file {
     return ( 3, undef, \@files_extracted, \@rar_parts_list );
 }
 
-
 sub do_for_norar_file {
     my ( $dconf, $finish_cmds, $base_dir, $sub_dir, $file_name ) = @_;
 
@@ -1135,7 +1108,6 @@ sub do_for_norar_file {
     return 1;
 }
 
-
 sub get_next_file_path {
     my ( $file_path ) = @_;
 
@@ -1148,7 +1120,6 @@ sub get_next_file_path {
 
     return $new_file_path;
 }
-
 
 sub rm_empty_dir {
     my ( $dir_path ) = @_;
@@ -1166,7 +1137,6 @@ sub rm_empty_dir {
 
     return 1;
 }
-
 
 sub rm_rec_empty_dir {
     my ( $dir_path ) = @_;
@@ -1192,7 +1162,6 @@ sub rm_rec_empty_dir {
 
     return rm_empty_dir( $dir_path );
 }
-
 
 sub get_rec_dir_mtime {
     my ( $dir_path ) = @_;
@@ -1221,7 +1190,6 @@ sub get_rec_dir_mtime {
     }
     return $max_mtime;
 }
-
 
 sub do_cmds {
     my ( $state, $dconf, $finish_cmds ) = @_;
@@ -1291,14 +1259,14 @@ sub do_cmds {
                $all_ok = 0;
             }
 
-        # set_saved_dir_mtime        
+        # set_saved_dir_mtime
         } elsif ( $cmd eq 'set_saved_dir_mtime' ) {
             my $dest_dir_path = shift @$cmd_conf;
             my $sub_dir = shift @$cmd_conf;
             unless ( set_saved_dir_mtime( $dest_dir_path, $sub_dir ) ) {
                 $all_ok = 0;
             }
-            
+
         # rm_empty_dir
         } elsif ( $cmd eq 'rm_empty_dir' ) {
             my $dir_path = shift @$cmd_conf;
@@ -1316,18 +1284,17 @@ sub do_cmds {
     return $all_ok;
 }
 
-
 sub check_minimum_free_space {
     my ( $dconf, $path ) = @_;
 
     my $min_fs_MB = 100;
     $min_fs_MB = $dconf->{'minimum_free_space'} if defined $dconf->{'minimum_free_space'};
-    
+
     $path = $dconf->{dest_dir} unless defined $path;
-    
+
     my $real_path = readlink( $path );
     $real_path = $path unless $real_path;
-    
+
     my $df_ref = dfportable( $real_path, 1024*1024 );
     unless ( defined $df_ref ) {
         print "ERROR: Can't determine free space on device for '$path' (real path '$real_path')." if $ver >= 1;
@@ -1345,9 +1312,8 @@ sub check_minimum_free_space {
     return 1;
 }
 
-
 sub process_unrar_dir_ok {
-    my ( 
+    my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
         $ud_err_code, $base_dir
     ) = @_;
@@ -1376,19 +1342,18 @@ sub process_unrar_dir_ok {
     # Empty stacks.
     @$undo_cmds = ();
     @$finish_cmds = ();
-    
+
     return save_state( $state, $dconf );
 }
 
-
-sub process_unrar_dir_err { 
+sub process_unrar_dir_err {
     my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
         $ud_err_code, $base_dir, $save_info
     ) = @_;
-            
+
     if ( $sub_dir && $save_info ) {
-        
+
         # Save state when error occured.
         my $base_info = {
             error => 1,
@@ -1416,10 +1381,8 @@ sub process_unrar_dir_err {
     return save_state( $state, $dconf );
 }
 
-
-
 sub process_unrar_archive_ok {
-    my ( 
+    my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
         $file_sub_path, $rar_parts_list
     ) = @_;
@@ -1433,17 +1396,16 @@ sub process_unrar_archive_ok {
     # Empty stacks.
     @$undo_cmds = ();
     @$finish_cmds = ();
-    
+
     return save_state( $state, $dconf );
 }
 
-
-sub process_unrar_archive_err { 
+sub process_unrar_archive_err {
     my (
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
         $file_sub_path, $rar_parts_list
     ) = @_;
-            
+
     # ToDo save error - check for modifications next time.
 
     # Undo command.
@@ -1458,17 +1420,16 @@ sub process_unrar_archive_err {
     return save_state( $state, $dconf );
 }
 
-
 =head2 unrar_dir
 
-Return 
+Return
 * undef if extracted ok,
 * -2 on foreign error (e.g. can't list directory structure),
 * -3 on unrar error and
 * -4 on fatal foreign error (e.g. not free space),
 * -5 quit keypress.
 
-=cut 
+=cut
 
 sub unrar_dir {
     my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
@@ -1477,7 +1438,7 @@ sub unrar_dir {
     return -5 if $keypress_obj->get_exit_keypressed();
 
     return -4 unless check_minimum_free_space( $dconf );
-    
+
     if ( 0 && $ver >= 5 && $sub_dir eq '/subdir10/ssdB' ) {
         print "SIMULATED ERROR fro subdir '$sub_dir'.\n";
         return -2;
@@ -1487,10 +1448,10 @@ sub unrar_dir {
 
     my $full_src_dir = catdir( $base_dir, $sub_dir );
     print "Entering directory '$full_src_dir'\n" if $ver >= 3;
-    
-    # Save mtime to cache for resurection.    
+
+    # Save mtime to cache for resurection.
     $src_dir_mtimes->{ $sub_dir } = get_item_mtime( $full_src_dir );
-    
+
     my $items = load_dir_content( $full_src_dir );
     return -2 unless defined $items;
     return undef unless scalar @$items;
@@ -1500,7 +1461,7 @@ sub unrar_dir {
 
     # dirs
     foreach my $name ( sort @$items ) {
-        
+
         my $new_sub_dir = catdir( $sub_dir, $name );
         next if exists $state->{done}->{ $new_sub_dir };
 
@@ -1542,26 +1503,26 @@ sub unrar_dir {
 
             # Going deeper and deeper inside directory structure.
             my $ud_err_code = unrar_dir( $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep+1);
-            
+
             # Unrar ok.
             unless ( defined $ud_err_code ) {
                 print "Dir '$new_sub_dir' unrar status ok.\n" if $ver >= 5;
 
                 if ( $deep < $dconf->{basedir_deep} ) {
-                    process_unrar_dir_ok( 
+                    process_unrar_dir_ok(
                         $state, $undo_cmds, $finish_cmds, $dconf, $new_sub_dir, $deep,
                         $ud_err_code, $base_dir
                     );
                 }
-                
+
                 next; # Continue to next directory item.
             }
 
             # Unrar failed.
             print "Dir '$new_sub_dir' unrar failed (err code $ud_err_code).\n" if $ver >= 5;
-            
+
             my $err_is_too_fatal = ( $ud_err_code <= -4 ); # -4, -5, ... Too fatal.
-            
+
             if ( $deep < $dconf->{basedir_deep} ) {
                 my $save_info = ( ! $err_is_too_fatal );
                 process_unrar_dir_err(
@@ -1587,7 +1548,7 @@ sub unrar_dir {
 
     # Find first parts or rars.
     # 0 .. to unrar (not processed), 1 .. unrared ok, -1 .. unrar error
-    my $parts_status = {}; 
+    my $parts_status = {};
     foreach my $name ( sort @$items ) {
         my $file_sub_path = catfile( $sub_dir, $name );
         next if exists $state->{done}->{ $file_sub_path };
@@ -1622,7 +1583,7 @@ sub unrar_dir {
                     $files_done->{ $file_sub_path } = 1;
                     next;
                 }
-                
+
                 # Is first part -> was extracted.
 
                 # If error -> do not process these archives as normal files
@@ -1690,7 +1651,7 @@ sub unrar_dir {
             }
         }
     }
-    
+
     dumper( '$parts_status', $parts_status ) if $ver >= 6;
     my $not_processed_parts_found = 0;
     foreach my $part ( keys %$parts_status ) {
@@ -1700,8 +1661,6 @@ sub unrar_dir {
             last;
         }
     }
-
-
 
     # No rar files.
     # Use $files_done.
@@ -1719,20 +1678,19 @@ sub unrar_dir {
         }
     }
 
-
     return -3 if $extract_error;
-    return -3 if $not_processed_parts_found;        
+    return -3 if $not_processed_parts_found;
 
     if ( $deep >= $dconf->{basedir_deep} ) {
-        push @$finish_cmds, [ 
+        push @$finish_cmds, [
             'set_saved_dir_mtime',
             catdir( $dconf->{dest_dir}, $sub_dir ),
             $sub_dir,
-        ];    
-    }            
-            
+        ];
+    }
+
     # Recursive remove main dir.
-    if ( $deep == $dconf->{basedir_deep} ) {        
+    if ( $deep == $dconf->{basedir_deep} ) {
         if ( $dconf->{remove_done} ) {
             push @$finish_cmds, [ 'rm_rec_empty_dir', $full_src_dir ];
         }
@@ -1741,27 +1699,26 @@ sub unrar_dir {
     return undef;
 }
 
-
 sub unrar_dir_start {
     my ( $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep ) = @_;
 
-    # Reset.    
+    # Reset.
     $src_dir_mtimes = {};
-    
+
     my $ud_err_code = unrar_dir(
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep
     );
 
     my $base_dir = $dconf->{src_dir};
- 
+
     # Unrar ok.
     unless ( defined $ud_err_code ) {
         dumper( 'Last $finish_cmds', $finish_cmds ) if $ver >= 4;
-        process_unrar_dir_ok( 
+        process_unrar_dir_ok(
             $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
             $ud_err_code, $base_dir
         );
-        
+
        return undef;
     }
 
@@ -1770,7 +1727,7 @@ sub unrar_dir_start {
 
     # Unrar failed.
     dumper( 'Last $undo_cmds', $undo_cmds ) if $ver >= 4;
-    process_unrar_dir_err( 
+    process_unrar_dir_err(
         $state, $undo_cmds, $finish_cmds, $dconf, $sub_dir, $deep,
         $ud_err_code, $base_dir, $save_info
     );
@@ -1778,10 +1735,9 @@ sub unrar_dir_start {
     return $ud_err_code;
 }
 
-
 sub remove_item_from_state {
     my ( $state, $item_name ) = @_;
-    
+
     if ( exists $state->{done}->{$item_name} ) {
         print "Removing item '$item_name' from state:done.\n" if $ver >= 6;
         delete $state->{done}->{$item_name};
@@ -1792,9 +1748,6 @@ sub remove_item_from_state {
     }
     return 1;
 }
-
-
-
 
 my $ret_code = main();
 $keypress_obj->cleanup_before_exit() if defined $keypress_obj;
@@ -1812,7 +1765,7 @@ Michal Jurosz <au@mj41.cz>
 
 Copyright (c) 2009-2010 Michal Jurosz. All rights reserved.
 
-=head1 LICENSE 
+=head1 LICENSE
 
 auto-unrar is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1825,7 +1778,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar.  If not, see <http://www.gnu.org/licenses/>. 
+along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 
 =head1 BUGS
 

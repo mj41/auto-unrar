@@ -117,8 +117,6 @@ sub extract_headers {
     return ( $flagsEX & 128, $flags & 4, $continue );
 }
 
-
-
 sub unpack_flags {
     my ( $packed_flags ) = @_;
 
@@ -135,7 +133,6 @@ sub unpack_flags {
     };
     return $unpacked_flags;
 }
-
 
 ################ PUBLIC METHODS ################
 
@@ -277,7 +274,7 @@ sub process_file {
         if ( $processresult != 0 ) {
             $errorcode =
               "Error from dll - (Check dll documentation): " . $processresult;
-#probably wrong password but check unrar.dll documentation for error description
+			# probably wrong password but check unrar.dll documentation for error description
             last;
         }
 
@@ -299,6 +296,7 @@ sub process_file {
 declare_win32_functions();
 
 1;
+
 __END__
 
 =head1 NAME

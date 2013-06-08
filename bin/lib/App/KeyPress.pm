@@ -10,6 +10,7 @@ our $VERSION = 0.06;
 use Term::ReadKey;
 our $ver = 0;
 
+
 sub new {
     my ( $class, $ver, $debug ) = @_;
 
@@ -38,36 +39,29 @@ sub new {
     return $self;
 }
 
-
 sub set_before_exit_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{before_exit} = $sub_ref;
 }
-
 
 sub set_quit_pressed_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{quit_pressed} = $sub_ref;
 }
 
-
 sub set_return_on_exit {
     my ( $self, $return_on_exit ) = @_;
     $self->{return_on_exit} = $return_on_exit;
 }
-
-
 sub set_pause_begin_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{pause_begin} = $sub_ref;
 }
 
-
 sub set_pause_refresh_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{pause_refresh} = $sub_ref;
 }
-
 
 sub set_pause_refresh_rate {
     my ( $self, $refresh_time ) = @_;
@@ -75,12 +69,10 @@ sub set_pause_refresh_rate {
     $self->{hooks}->{pause_refresh_rate} = $refresh_time;
 }
 
-
 sub set_pause_end_sub {
     my ( $self, $sub_ref ) = @_;
     $self->{hooks}->{pause_end} = $sub_ref;
 }
-
 
 sub cleanup_before_exit {
     my ( $self ) = @_;
@@ -90,19 +82,16 @@ sub cleanup_before_exit {
     return 1;
 }
 
-
 sub get_exit_keypressed {
     my ( $self ) = @_;
     return $self->{exit_keypressed};
 }
-
 
 sub reset_exit_keypressed {
     my ( $self ) = @_;
     $self->{exit_keypressed} = 0;
     return 1;
 }
-
 
 sub last_pressed_key() {
     my ( $self ) = @_;
@@ -115,12 +104,11 @@ sub last_pressed_key() {
     return $char;
 }
 
-
 sub process_keypress() {
     my ( $self, $start_time ) = @_;
-    
+
     return 1 if $self->{exit_keypressed};
-    
+
     $start_time = time() unless defined $start_time;
 
     my $report_time = $start_time;
@@ -165,7 +153,6 @@ sub process_keypress() {
     return 1;
 }
 
-
 sub sleep_and_process_keypress {
     my ( $self, $sleep_time ) = @_;
 
@@ -185,6 +172,5 @@ sub sleep_and_process_keypress {
     print "\n" if $ver > 2;
     return 1;
 }
-
 
 1;
