@@ -164,10 +164,10 @@ sub main {
 
     # Process and test conf_fpath.
     if ( $options->{'conf_fpath'} eq 'MY' ) {
-        $options->{'conf_fpath'}  = catfile( $RealBin, '..', 'conf', 'unrar-my-conf.pl' );
+        $options->{'conf_fpath'} = catfile( $RealBin, '..', 'conf', 'unrar-my-conf.pl' );
 
-    } elsif ( $options->{'conf_fpath'}  eq 'DATA' ) {
-        $options->{'conf_fpath'}  = catfile( $RealBin, '..', 'conf', 'unrar-data-conf.pl' );
+    } elsif ( $options->{'conf_fpath'} eq 'DATA' ) {
+        $options->{'conf_fpath'} = catfile( $RealBin, '..', 'conf', 'unrar-data-conf.pl' );
     }
 
     unless ( -f $options->{'conf_fpath'} ) {
@@ -192,7 +192,7 @@ sub main {
 
 
         $action_file_data = load_perl_data( $options->{action_fpath} );
-        if ( (not $action_file_data) || ref $action_file_data ne 'ARRAY'  ) {
+        if ( (not $action_file_data) || ref $action_file_data ne 'ARRAY' ) {
             print "Action file '$options->{action_fpath}' data loading error.\n" if $ver >= 1;
             return 0;
         }
@@ -280,12 +280,12 @@ sub main {
 
             dumper( 'dconf', $dconf ) if $ver >= 5;
             my $ud_err_code = unrar_dir_start(
-                $state,
-                [], # $undo_cmds
-                [], # $finish_cmds
-                $dconf,
-                '', # $sub_dir
-                0  # $deep
+                $state, # $state
+                [],     # $undo_cmds
+                [],     # $finish_cmds
+                $dconf, # $dcong
+                '',     # $sub_dir
+                0       # $deep
             );
 
             # Clean up 'info' part.
@@ -671,7 +671,7 @@ sub save_item_done {
     if ( $state_store_type eq 'storable' ) {
         do_cmd_sub(
             sub { store( $state, $dconf->{state_fpath} ); },
-            "Saving state to '$dconf->{state_fpath}' failed  (type=$state_store_type)."
+            "Saving state to '$dconf->{state_fpath}' failed (type=$state_store_type)."
         );
 
     } elsif ( $state_store_type eq 'perl' ) {
@@ -1303,7 +1303,7 @@ sub check_minimum_free_space {
         return 0;
     }
 
-    my $free_MB =  $df_ref->{bfree};
+    my $free_MB = $df_ref->{bfree};
     $free_MB = int( $free_MB + 0.5 );
     if ( $free_MB < $min_fs_MB ) {
         print "ERROR: There is not required amount of free space ($free_MB MB < $min_fs_MB MB) on device (path '$path', real path '$real_path').\n" if $ver >= 1;
@@ -1759,9 +1759,10 @@ exit(1) unless $ret_code;
 exit(0);
 
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Michal Jurosz <au@mj41.cz>
+jorricks
 
 =head1 COPYRIGHT
 
@@ -1776,11 +1777,11 @@ the Free Software Foundation, either version 3 of the License, or
 
 auto-unrar is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+along with Foobar. If not, see <http://www.gnu.org/licenses/>.
 
 =head1 BUGS
 
