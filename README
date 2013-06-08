@@ -1,8 +1,5 @@
-Smart Perl scripts (for Linux and Windows) to auto unrar/extract a directory structure containing many RAR archives.
-
-== bin/unrar.pl (for Linux) ==
-
-Smart extracting of many RAR archives for Linux.
+Smart Perl script (for Linux) to auto unrar/extract a directory structure
+containing many RAR archives.
 
 Features:
 * extract multipart archives
@@ -36,41 +33,20 @@ Features:
 * debug and verbose output support
 
 Tested on Linux only. Also see ToDo list inside source code
-http://github.com/mj41/auto-unrar/blob/master/bin/unrar2.pl .
+http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 
 === Install ===
 
-cpan Filesys::DfPortable
-
-== bin/unrar.pl (for Windows) ==
-
-Smart extracting of RAR archives for Windows with password recovery.
-
-Create directories 'extract', 'extracted' and 'extracted-arch' inside 'auto-unrar' directory.
-Put your archive tree to 'extract'.
-Run 'perl unrar.pl'.
-See content of 'extracted' and 'extracted-arch' and not extracted content inside 'extract'.
-
-See example image http://bit.ly/a1hDRD .
-
-Inside 'tests' you can see structure of what you can put to 'extract'.
-
-=== Install ===
-
-Perl should be installed. Try http://strawberryperl.com/ .
-
-git clone git://github.com/mj41/auto-unrar.git auto-unrar
+git clone git://github.com/mj41/auto-unrar-win.git auto-unrar
 cd auto-unrar
-mkdir extract
-mkdir extracted
-mkdir extract-arch
 cpan Term::ReadKey
 cpan YAML::Any
+cpan Filesys::DfPortable
 
 === Run ===
 
-cd auto-unrar/bin
-perl unrar.pl
+cd auto-unrar
+perl bin/auto-unrar.pl
 
 Press:
 * P ... pause,
