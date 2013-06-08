@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 use strict;
 use warnings;
 
@@ -37,7 +39,7 @@ use Data::Dumper;
 use Digest::SHA1;
 use Filesys::DfPortable;
 
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../lib";
 use App::KeyPress;
 use Archive::Rar;
 
