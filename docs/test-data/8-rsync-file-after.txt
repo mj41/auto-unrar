@@ -1,8 +1,0 @@
-- /subdir01
-- /subdir02
-- /subdir03
-- /subdir07
-- /subdir10
-- /subdir11
-- /subdir12
-- /test0.txt
