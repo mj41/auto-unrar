@@ -39,8 +39,13 @@ http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 
 For Debian see docs/debian-howto.md
 
+cd ~/
 git clone git://github.com/mj41/auto-unrar-win.git auto-unrar
 cd auto-unrar
+mkdir -p temp
+mkdir -p conf-my
+mkdir -p db
+cp conf/videos-example.pl conf-my
 cpan Term::ReadKey
 cpan YAML::Any
 cpan Filesys::DfPortable
