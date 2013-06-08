@@ -114,7 +114,7 @@ sub TestExe {
 #
 sub SearchExe {
     my $self = shift;
-    my $cmd = 'rar';
+    my $cmd;
 
     if ( $IsWindows ) {
         my ( $key, $type, $value );
@@ -153,9 +153,9 @@ sub SearchExe {
         goto Good if $self->TestExe($cmd);
     }
     else {
-        $cmd = 'rar';
+        $cmd = 'unrar';
         goto Good if $self->TestExe($cmd);
-        $cmd = './rar';
+        $cmd = './unrar';
         goto Good if $self->TestExe($cmd);
     }
   Bad:
