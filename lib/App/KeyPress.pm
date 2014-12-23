@@ -5,7 +5,7 @@ use warnings;
 use Carp qw(carp croak verbose);
 
 use base 'Exporter';
-our $VERSION = 0.06;
+our $VERSION = 0.10;
 
 use Term::ReadKey;
 our $ver = 0;
@@ -32,6 +32,12 @@ sub new {
     $hooks->{pause_end} = sub {};
     $self->{hooks} = $hooks;
 
+    # Catch exit.
+    $self->{cleanup_done} = 0;
+    $SIG{INT} = sub {
+        $self->cleanup_before_exit(1);
+        exit 1;
+    };
     # Only process cleanup_before_exit (before_exit) and return. Do not call 'exit'.
     $self->{return_on_exit} = 0;
     $self->{exit_keypressed} = 0;
@@ -75,9 +81,14 @@ sub set_pause_end_sub {
 }
 
 sub cleanup_before_exit {
-    my ( $self ) = @_;
+    my ( $self, $force ) = @_;
+
+    return 1 if $self->{cleanup_done};
+    $self->{cleanup_done} = 1;
     $self->{exit_keypressed} = 1;
-    Term::ReadKey::ReadMode('normal');
+
+    print "Running cleanup phase (force ".($force+0).").\n" if $self->{ver} >= 6;
+    Term::ReadKey::ReadMode('restore');
     $self->{hooks}->{before_exit}->();
     return 1;
 }
@@ -131,7 +142,7 @@ sub process_keypress() {
             } elsif ( $char eq 'Q' || $char eq 'E' ) {
                 $self->{hooks}->{quit_pressed}->();
                 print "User press exit key.\n" if $ver > 2;
-                $self->cleanup_before_exit();
+                $self->cleanup_before_exit(0);
                 return 1 if $self->{return_on_exit};
                 exit;
 
@@ -171,6 +182,11 @@ sub sleep_and_process_keypress {
     }
     print "\n" if $ver > 2;
     return 1;
+}
+
+sub DESTROY {
+    my $self = shift;
+    $self->cleanup_before_exit(1);
 }
 
 1;
