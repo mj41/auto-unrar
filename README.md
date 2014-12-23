@@ -37,13 +37,13 @@ Features
 * tested on many big archives
 * debug and verbose output support
 
-Tested on Linux only. Also see ToDo list inside source code
-http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
+Tested on Linux only. Also see ToDo list inside source code [bin/auto-unrar.pl](http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl).
 
 Install
 -------
 
-For Debian see docs/debian-howto.md. For Fedora see docs/fedora-howto.md.
+For Debian see [docs/debian-howto.md](https://github.com/mj41/auto-unrar/blob/master/docs/debian-howto.md). 
+For Fedora see [docs/fedora-howto.md](https://github.com/mj41/auto-unrar/blob/master/docs/fedora-howto.md).
 
 cd ~/
 git clone git://github.com/mj41/auto-unrar.git auto-unrar
@@ -68,7 +68,7 @@ Press:
 Future development and donations
 --------------------------------
 
-Report bug or feature request on (github.com/mj41/auto-unrar/issues)[https://github.com/mj41/auto-unrar/issues].
+Report bug or feature request on [github.com/mj41/auto-unrar/issues](https://github.com/mj41/auto-unrar/issues).
 
 
 Donation

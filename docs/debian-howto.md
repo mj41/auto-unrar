@@ -3,7 +3,7 @@ auto-unrar Debian HowTo
 
 UnRar script for Debian (and other Linux distributions).
 
-This is a tutorial how to use auto-unrar script ( https://github.com/mj41/auto-unrar ) with the newest Debian.
+This is a tutorial how to use [auto-unrar script](https://github.com/mj41/auto-unrar) with the newest Debian.
 
 Installing and configuration
 ----------------------------
@@ -12,14 +12,15 @@ Installing and configuration
  - sudo apt-get install perl
  - perl -V
 2. Make a folder for now called "auto-unrar"
-3. Download this : https://github.com/mj41/auto-unrar/archive/master.zip and unzip all the files in the folder to "auto-unrar"
+3. Download this: [github.com/mj41/auto-unrar/archive/master.zip](https://github.com/mj41/auto-unrar/archive/master.zip) and unzip all the files in the folder to "auto-unrar"
 4. Make sure you have every file!
-5. Install "libfilesys-df-perl"
-  - you can do this with the command "sudo apt-get install libfilesys-df-perl" in console
+5. Install `libfilesys-df-perl`
+  - you can do this with the command `sudo apt-get install libfilesys-df-perl` in console
 6. Install "libterm-readkey-perl"
-  - you can do this with the command "sudo apt-get install libterm-readkey-perl" in console
+  - you can do this with the command `sudo apt-get install libterm-readkey-perl` in console
 7. Install unrar-nonfree
   - This is done with the following commands:
+```
     wget https://launchpad.net/ubuntu/+archive/primary/+files/unrar-nonfree_5.0.10.orig.tar.gz
     tar -xvf unrar-nonfree_5.0.10.orig.tar.gz
     cd unrar
@@ -27,12 +28,13 @@ Installing and configuration
     sudo make install
     cd ..
     rm -rf unrar
-    rm unrar-nonfree_5.0.10.orig.tar.gz 
-  - To test if it works, 'unrar --help'
+    rm unrar-nonfree_5.0.10.orig.tar.gz
+```
+  - To test if it works, `unrar --help`
 8. Edit you config file
-  - mkdir -p conf-my
-  - mkdir -p db
-  - cp conf/videos-example.pl conf-my/my-unrar-config.pl
+  - `mkdir -p conf-my`
+  - `mkdir -p db`
+  - `cp conf/videos-example.pl conf-my/my-unrar-config.pl`
   - edit 'conf-my/my-unrar-config.pl' to your likings.
   - Name is for the program name, this doesn't matter
   - src_dir is the place you have the rar's, edit to your location example "/home/USER-NAME/rar-archives-in/"
@@ -57,19 +59,19 @@ Running
     - "No command selected. Option 'cmd' in mandatory. Use --help to see more info."
 14. Create the run command
   - perl "absolute path to auto-unrar.pl" --conf="absolute path to config file" --cmd=unrar
-  - perl /home/$USER/auto-unrar/bin/auto-unrar.pl --conf="/home/$USER/unrar/conf-my/my-unrar-config.pl" --cmd=unrar
-  - You can add "--ver 10" option to raise verbose level to 10 (maximum) for debugging.
+  - `perl /home/$USER/auto-unrar/bin/auto-unrar.pl --conf="/home/$USER/unrar/conf-my/my-unrar-config.pl" --cmd=unrar`
+  - You can add `--ver 10` option to raise verbose level to 10 (maximum) for debugging.
 
 Scheduling
 ----------
 
 Since you use Debian you can use scheduling.
-Crontab is explained here: https://help.ubuntu.com/community/CronHowto , it is for all linux distributions.
-15. Enter this in console: "sudo crontab -e"
+Crontab is explained here: [help.ubuntu.com/community/CronHowto](https://help.ubuntu.com/community/CronHowto), it is for all linux distributions.
+15. Enter this in console: `sudo crontab -e`
 16. Enter the following line at the end:
    - "when you want it" PATH=/usr/local/bin:/usr/bin:/usr/sbin:/usr/lib; perl "absolute path to auto-unrar.pl" --conf="absolute path to config" --cmd=unrar
    - so for instance if you want to run this job only once a day at 8:30 AM you'll need to set it this way:
-   - 30 08 * * * PATH=/usr/local/bin:/usr/bin:/usr/sbin:/usr/lib; perl /home/USER-NAME/auto-unrar/bin/auto-unrar.pl --conf="/home/USER-NAME/auto-unrar/conf-my/my-unrar-config.pl" --cmd=unrar
+   - `30 08 * * * PATH=/usr/local/bin:/usr/bin:/usr/sbin:/usr/lib; perl /home/USER-NAME/auto-unrar/bin/auto-unrar.pl --conf="/home/USER-NAME/auto-unrar/conf-my/my-unrar-config.pl" --cmd=unrar`
 
 If you have any questions, you can contact the original writer of this script with IRC here:
 irc://irc.freenode.org/auto-unrar
