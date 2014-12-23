@@ -1,7 +1,12 @@
+auto-unrar
+==========
+
 Smart Perl script (for Linux) to auto unrar/extract a directory structure
 containing many RAR archives.
 
-Features:
+Features
+--------
+
 * extract multipart archives
 * handle all three multipart archives naming conventions
 ** .part1.rar, .part2.rar, ...
@@ -35,7 +40,8 @@ Features:
 Tested on Linux only. Also see ToDo list inside source code
 http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 
-=== Install ===
+Install
+-------
 
 For Debian see docs/debian-howto.md. For Fedora see docs/fedora-howto.md.
 
@@ -43,24 +49,30 @@ cd ~/
 git clone git://github.com/mj41/auto-unrar.git auto-unrar
 cd auto-unrar
 mkdir -p temp conf-my db
-cp conf/videos-example.pl conf-my/
+cp conf/videos-example.pl conf-my/videos.pl
+vim conf-my/videos.pl
 cpanm Term::ReadKey
 cpanm Filesys::Df
 
-=== Run ===
+Run
+---
 
-cd auto-unrar
-perl bin/auto-unrar.pl
+cd ~/auto-unrar
+perl bin/auto-unrar.pl --conf conf-my/videos.pl --cmd unrar
 
 Press:
 * P ... pause,
 * C .. continue,
 * Q .. quit.
 
-== Future development and donations ==
+Future development and donations
+--------------------------------
 
-Ping me (mj41) on irc://irc.freenode.org/auto-unrar or write to au@mj41.cz .
-We can discuss bugs and feature requests.
+Report bug or feature request on (github.com/mj41/auto-unrar/issues)[https://github.com/mj41/auto-unrar/issues].
 
-Feel free to donate some money to support development on
-http://pledgie.com/campaigns/9585 . Thank you.
+
+Donation
+--------
+
+Feel free to donate some money to support development on 
+[pledgie.com/campaigns/9585](http://pledgie.com/campaigns/9585). Thank you.
