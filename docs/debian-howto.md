@@ -18,11 +18,18 @@ Installing and configuration
   - you can do this with the command "sudo apt-get install libfilesys-df-perl" in console
 6. Install "libterm-readkey-perl"
   - you can do this with the command "sudo apt-get install libterm-readkey-perl" in console
-7. in console type: "sudo pico /etc/apt/sources.list"
-  - Where you see something like "deb http://http.us.debian.org/debian stable main"
-  - Add non-free to it so it becomes "deb http://http.us.debian.org/debian stable main non-free"
-8. Install unrar non-free in console, "sudo apt-get install unrar"
-9. Edit you config file
+7. Install unrar-nonfree
+  - This is done with the following commands:
+    wget https://launchpad.net/ubuntu/+archive/primary/+files/unrar-nonfree_5.0.10.orig.tar.gz
+    tar -xvf unrar-nonfree_5.0.10.orig.tar.gz
+    cd unrar
+    sudo make
+    sudo make install
+    cd ..
+    rm -rf unrar
+    rm unrar-nonfree_5.0.10.orig.tar.gz 
+  - To test if it works, 'unrar --help'
+8. Edit you config file
   - mkdir -p conf-my
   - mkdir -p db
   - cp conf/videos-example.pl conf-my/my-unrar-config.pl
