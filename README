@@ -37,18 +37,15 @@ http://github.com/mj41/auto-unrar/blob/master/bin/auto-unrar.pl .
 
 === Install ===
 
-For Debian see docs/debian-howto.md
+For Debian see docs/debian-howto.md. For Fedora see docs/fedora-howto.md.
 
 cd ~/
 git clone git://github.com/mj41/auto-unrar.git auto-unrar
 cd auto-unrar
-mkdir -p temp
-mkdir -p conf-my
-mkdir -p db
+mkdir -p temp conf-my db
 cp conf/videos-example.pl conf-my/
-cpan Term::ReadKey
-cpan YAML::Any
-cpan Filesys::Df
+cpanm Term::ReadKey
+cpanm Filesys::Df
 
 === Run ===
 
