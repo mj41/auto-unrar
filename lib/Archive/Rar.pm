@@ -4,7 +4,7 @@ require 5.004;
 
 use strict;
 use vars ('$VERSION');
-$VERSION = '2.02'; # with mj41 changes
+$VERSION = '2.02'; # with mj41 changes, v2
 
 use Data::Dumper;
 use Cwd;
@@ -61,7 +61,6 @@ sub CleanDir {
 #
 sub new {
     my $class = shift;
-
     my $self = bless {}, $class;
     return undef if not defined $self->initialize(@_);
     return $self;
@@ -159,7 +158,7 @@ sub SearchExe {
         goto Good if $self->TestExe($cmd);
     }
   Bad:
-    warn "ERROR: Can't find rar binary.\n" if $self->{dbg};
+    warn "ERROR: Can't find 'unrar' binary.\n";
     return undef;
   Good:
     $self->{rar} = qq["$cmd"];
