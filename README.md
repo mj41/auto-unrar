@@ -13,25 +13,25 @@ Features
 ** .rar, .r00, .r01, ...
 ** .001, .002, ...
 * duplicate directory structure tree
-** respect basedir_deep configuration option
-** see http://bit.ly/dafLxF ( docs/test-data/summary.txt )
+ * respect basedir_deep configuration option
+ * see [docs/test-data/](https://github.com/mj41/auto-unrar/blob/master/docs/test-data/)
 * move/rename normal files (no rar archives)
 * check minimum free space on device
 * can delete archives if extracted ok
 * save status to file
-** so already extracted archives aren't extracted again
-** trying extract again only if some change found
+ * so already extracted archives aren't extracted again
+ * trying extract again only if some change found
 * keypress features during run ( p...pause, c...continue, q...quit )
 * smart error handling
-** maintain undo actions list for recovery to initial state
-** sleep (increment time to sleep) and try again
-** revert to initial state if error found during extraction of directory
+ * maintain undo actions list for recovery to initial state
+ * sleep (increment time to sleep) and try again
+ * revert to initial state if error found during extraction of directory
 * can be configured to run periodically (e.g. from cron) to incrementally extract RAR archives
-** check if there is any change inside directory
+ * check if there is any change inside directory
 * support for rsync integration
-** generate rsync exclude list (basedir_deep configuration option is used)
-** check time of last modification of base directories (recursively)
-** respect minimum time since last change (let rsync finish his job)
+ * generate rsync exclude list (basedir_deep configuration option is used)
+ * check time of last modification of base directories (recursively)
+ * respect minimum time since last change (let rsync finish his job)
 * preserve mtime of files and directories where possible
 * has own test suite
 * tested on many big archives
@@ -75,4 +75,5 @@ Donation
 --------
 
 Feel free to donate some money to support development on 
-[pledgie.com/campaigns/9585](http://pledgie.com/campaigns/9585). Thank you.
+[pledgie.com/campaigns/9585](http://pledgie.com/campaigns/9585).
+Thank you.
