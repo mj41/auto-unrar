@@ -1,0 +1,139 @@
+# Input tree of 'src_dir' (temp/test-data/in/) before auto-un |	# Input tree of 'src_dir' (temp/test-data/in/) after auto-unr
+
+temp/test-data/in/						temp/test-data/in/
+├── subdir01-ok						      <
+│   ├── test1-file.txt					      <
+│   ├── test1.rar					      <
+│   ├── test1.txt					      <
+│   ├── test2.rar					      <
+│   └── test2.txt					      <
+├── subdir02-ok						      <
+│   ├── subdir2b					      <
+│   │   ├── test3.rar					      <
+│   │   ├── test3.txt					      <
+│   │   ├── test4.rar					      <
+│   │   └── test4.txt					      <
+│   ├── test5arch.part1.rar				      <
+│   ├── test5arch.part2.rar				      <
+│   ├── test5arch.part3.rar				      <
+│   ├── test5arch.part4.rar				      <
+│   ├── test5arch.part5.rar				      <
+│   └── test5.txt					      <
+├── subdir03-ok						      <
+│   ├── test6-dir\ -\ spaces.rar			      <
+│   ├── test7-dir.r00					      <
+│   ├── test7-dir.r01					      <
+│   ├── test7-dir.r02					      <
+│   ├── test7-dir.r03					      <
+│   ├── test7-dir.r04					      <
+│   ├── test7-dir.r05					      <
+│   ├── test7-dir.r06					      <
+│   ├── test7-dir.r07					      <
+│   ├── test7-dir.r08					      <
+│   ├── test7-dir.r09					      <
+│   ├── test7-dir.r10					      <
+│   ├── test7-dir.r11					      <
+│   ├── test7-dir.r12					      <
+│   ├── test7-dir.r13					      <
+│   ├── test7-dir.r14					      <
+│   ├── test7-dir.r15					      <
+│   ├── test7-dir.r16					      <
+│   ├── test7-dir.r17					      <
+│   ├── test7-dir.r18					      <
+│   ├── test7-dir.r19					      <
+│   ├── test7-dir.r20					      <
+│   ├── test7-dir.r21					      <
+│   ├── test7-dir.r22					      <
+│   ├── test7-dir.r23					      <
+│   ├── test7-dir.r24					      <
+│   ├── test7-dir.r25					      <
+│   ├── test7-dir.r26					      <
+│   └── test7-dir.rar					      <
+├── subdir04-err						├── subdir04-err
+│   ├── test8.txt						│   ├── test8.txt
+│   ├── test9.part1.rar						│   ├── test9.part1.rar
+│   ├── test9.part2.rar						│   ├── test9.part2.rar
+│   ├── test9.part4.rar						│   ├── test9.part4.rar
+│   ├── test9.part5.rar						│   ├── test9.part5.rar
+│   └── test9.part8.rar						│   └── test9.part8.rar
+├── subdir05-err						├── subdir05-err
+│   ├── subdir5A-file						│   ├── subdir5A-file
+│   │   └── test10.txt						│   │   └── test10.txt
+│   ├── subdir5B-rar_error					│   ├── subdir5B-rar_error
+│   │   ├── test11.part1.rar					│   │   ├── test11.part1.rar
+│   │   ├── test11.part3.rar					│   │   ├── test11.part3.rar
+│   │   └── test11.part4.rar					│   │   └── test11.part4.rar
+│   └── test12.txt						│   └── test12.txt
+├── subdir06-err						├── subdir06-err
+│   ├── subdir6A-rar_ok						│   ├── subdir6A-rar_ok
+│   │   ├── test13.txt						│   │   ├── test13.txt
+│   │   ├── test14.part1.rar					│   │   ├── test14.part1.rar
+│   │   ├── test14.part2.rar					│   │   ├── test14.part2.rar
+│   │   ├── test14.part3.rar					│   │   ├── test14.part3.rar
+│   │   ├── test14.part4.rar					│   │   ├── test14.part4.rar
+│   │   └── test14.part5.rar					│   │   └── test14.part5.rar
+│   ├── subdir6B-rar_error					│   ├── subdir6B-rar_error
+│   │   ├── test15.r00						│   │   ├── test15.r00
+│   │   ├── test15.r01						│   │   ├── test15.r01
+│   │   ├── test15.r03						│   │   ├── test15.r03
+│   │   └── test15.rar						│   │   └── test15.rar
+│   └── subdir6D-file						│   └── subdir6D-file
+│       └── test16.txt						│       └── test16.txt
+├── subdir07-ok						      <
+│   ├── test17-file.001					      <
+│   ├── test17-file.002					      <
+│   ├── test17-file.003					      <
+│   ├── test17-file.004					      <
+│   ├── test17-file.005					      <
+│   └── test17-file.006					      <
+├── subdir08-err						├── subdir08-err
+│   ├── test18-file.part1.rar					│   ├── test18-file.part1.rar
+│   ├── test18-file.part2.rar					│   ├── test18-file.part2.rar
+│   ├── test18-file.part3.rar					│   ├── test18-file.part3.rar
+│   ├── test19-file.part1.rar					│   ├── test19-file.part1.rar
+│   ├── test19-file.part3.rar					│   ├── test19-file.part3.rar
+│   ├── test20-file.r00						│   ├── test20-file.r00
+│   ├── test20-file.r01						│   ├── test20-file.r01
+│   ├── test20-file.rar						│   ├── test20-file.rar
+│   ├── test21-file.r01						│   ├── test21-file.r01
+│   ├── test21-file.rar						│   ├── test21-file.rar
+│   ├── test22-file.001						│   ├── test22-file.001
+│   ├── test22-file.002						│   ├── test22-file.002
+│   ├── test22-file.003						│   ├── test22-file.003
+│   ├── test23-file.001						│   ├── test23-file.001
+│   └── test23-file.003						│   └── test23-file.003
+├── subdir09-err					      |	└── subdir09-err
+│   ├── test24-file.part3.rar				      |	    ├── test24-file.part3.rar
+│   ├── test24-file.part4.rar				      |	    ├── test24-file.part4.rar
+│   └── test24-file.part6.rar				      |	    └── test24-file.part6.rar
+├── subdir10-ok						      <
+│   ├── ssdA						      <
+│   │   ├── test26-no-rar.txt				      <
+│   │   ├── test27-file.part1.rar			      <
+│   │   ├── test27-file.part2.rar			      <
+│   │   ├── test28-file.rar				      <
+│   │   └── test29-no-rar.txt				      <
+│   ├── ssdB						      <
+│   │   ├── test30-file.rar				      <
+│   │   ├── test31-no-rar.txt				      <
+│   │   ├── test32-file.part1.rar			      <
+│   │   └── test32-file.part2.rar			      <
+│   ├── ssdC						      <
+│   │   ├── test33-file.part1.rar			      <
+│   │   ├── test33-file.part2.rar			      <
+│   │   ├── test34-file.part1.rar			      <
+│   │   ├── test34-file.part2.rar			      <
+│   │   ├── test35-no-rar.txt				      <
+│   │   └── test36-no-rar.txt				      <
+│   ├── test25.txt					      <
+│   └── test37-no-rar.txt				      <
+├── subdir11-ok						      <
+│   ├── test38-file.part001.r00				      <
+│   ├── test38-file.part001.rar				      <
+│   ├── test38-file.part002.part1.rar			      <
+│   └── test38-file.part002.part2.rar			      <
+├── subdir12-ok						      <
+│   └── test39.txt					      <
+└── test0-ok.txt					      <
+
+21 directories, 113 files				      |	10 directories, 40 files

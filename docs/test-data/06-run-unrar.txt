@@ -21,12 +21,15 @@ Misssing part num '4' - guessed file name '/subdir06-err/subdir6B-rar_error/test
 Extracting file '/subdir06-err/subdir6B-rar_error/test15.rar' (first of 5 parts).
 Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir06-err/subdir6B-rar_error/test15.rar'.
 Rar archive extractiong error: 3.
+Can't remove dir with items '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir06-err/subdir6A-rar_ok' (item 'test14.txt').
+Can't remove dir with items '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir06-err/subdir6A-rar_ok' (item 'test14.txt').
 Extracting file '/subdir07-ok/test17-file.001' (first of 6 parts).
 Extracting file '/subdir08-err/test18-file.part1.rar' (first of 3 parts).
 Misssing part num '2' - guessed file name '/subdir08-err/test19-file.part2.rar'.
 Extracting file '/subdir08-err/test19-file.part1.rar' (first of 3 parts).
 Error 3 in extracting from '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/in/subdir08-err/test19-file.part1.rar'.
 Rar archive extractiong error: 3.
+Can't remove dir with items '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir08-err' (item 'test18-file.txt').
 Directory '/home/mj/devel/dalsi-my/auto-unrar/bin/../temp/test-data/out/subdir09-err' not open for read.
 Extracting file '/subdir10-ok/ssdA/test27-file.part1.rar' (first of 2 parts).
 Extracting file '/subdir10-ok/ssdA/test28-file.rar'.

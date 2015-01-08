@@ -1,58 +1,63 @@
 # Input tree of 'src_dir' (temp/test-data/out/) after auto-unrar run:
 
 temp/test-data/out/
-|-- subdir01-ok
-|   |-- test1-file.txt
-|   |-- test1-file.txt.2
-|   |-- test1.txt
-|   |-- test2-file1.txt
-|   |-- test2-file2.txt
-|   |-- test2-file3.txt
-|   `-- test2.txt
-|-- subdir02-ok
-|   |-- subdir2b
-|   |   |-- test3-dir
-|   |   |   `-- test3-file.txt
-|   |   |-- test3.txt
-|   |   |-- test4-dir1
-|   |   |   |-- test4-dir1-file1.txt
-|   |   |   `-- test4-dir1-file2.txt
-|   |   |-- test4-dir2
-|   |   |   |-- test4-dir2-file1.txt
-|   |   |   |-- test4-dir2-file2.txt
-|   |   |   `-- test4-dir2-file3.txt
-|   |   `-- test4.txt
-|   |-- test5arch.txt
-|   `-- test5.txt
-|-- subdir03-ok
-|   |-- test6-dir\ -\ spaces
-|   |   `-- test6-file\ -\ spaces.txt
-|   `-- test7-dir
-|       `-- test7-file.txt
-|-- subdir07-ok
-|   `-- test17-file.txt
-|-- subdir10-ok
-|   |-- ssdA
-|   |   |-- test26-no-rar.txt
-|   |   |-- test27-file.txt
-|   |   |-- test28-file.txt
-|   |   `-- test29-no-rar.txt
-|   |-- ssdB
-|   |   |-- test30-file.txt
-|   |   |-- test31-no-rar.txt
-|   |   `-- test32-file.txt
-|   |-- ssdC
-|   |   |-- test33-file.txt
-|   |   |-- test34-file.txt
-|   |   |-- test35-no-rar.txt
-|   |   `-- test36-no-rar.txt
-|   |-- test25.txt
-|   `-- test37-no-rar.txt
-|-- subdir11-ok
-|   |-- test38-file.part001.txt
-|   `-- test38-file.part002.txt
-|-- subdir12-ok
-|   `-- test39.txt
-`-- test0-ok.txt
+├── subdir01-ok
+│   ├── test1-file.txt
+│   ├── test1-file.txt.2
+│   ├── test1.txt
+│   ├── test2-file1.txt
+│   ├── test2-file2.txt
+│   ├── test2-file3.txt
+│   └── test2.txt
+├── subdir02-ok
+│   ├── subdir2b
+│   │   ├── test3-dir
+│   │   │   └── test3-file.txt
+│   │   ├── test3.txt
+│   │   ├── test4-dir1
+│   │   │   ├── test4-dir1-file1.txt
+│   │   │   └── test4-dir1-file2.txt
+│   │   ├── test4-dir2
+│   │   │   ├── test4-dir2-file1.txt
+│   │   │   ├── test4-dir2-file2.txt
+│   │   │   └── test4-dir2-file3.txt
+│   │   └── test4.txt
+│   ├── test5arch.txt
+│   └── test5.txt
+├── subdir03-ok
+│   ├── test6-dir\ -\ spaces
+│   │   └── test6-file\ -\ spaces.txt
+│   └── test7-dir
+│       └── test7-file.txt
+├── subdir06-err
+│   └── subdir6A-rar_ok
+│       └── test14.txt
+├── subdir07-ok
+│   └── test17-file.txt
+├── subdir08-err
+│   └── test18-file.txt
+├── subdir10-ok
+│   ├── ssdA
+│   │   ├── test26-no-rar.txt
+│   │   ├── test27-file.txt
+│   │   ├── test28-file.txt
+│   │   └── test29-no-rar.txt
+│   ├── ssdB
+│   │   ├── test30-file.txt
+│   │   ├── test31-no-rar.txt
+│   │   └── test32-file.txt
+│   ├── ssdC
+│   │   ├── test33-file.txt
+│   │   ├── test34-file.txt
+│   │   ├── test35-no-rar.txt
+│   │   └── test36-no-rar.txt
+│   ├── test25.txt
+│   └── test37-no-rar.txt
+├── subdir11-ok
+│   ├── test38-file.part001.txt
+│   └── test38-file.part002.txt
+├── subdir12-ok
+│   └── test39.txt
+└── test0-ok.txt
 
-16 directories, 37 files
+19 directories, 39 files

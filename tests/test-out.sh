@@ -27,7 +27,7 @@ echo "# Input tree of 'src_dir' (temp/test-data/in/) before auto-unrar run:" > $
 echo "" >> $OUTD/02-in-tree-before.txt
 tree temp/test-data/in/ >> $OUTD/02-in-tree-before.txt
 
-echo "# Input tree of 'src_dir' (temp/test-data/out/) before auto-unrar run:" > $OUTD/03-out-tree-before.txt
+echo "# Output tree of 'src_dir' (temp/test-data/out/) before auto-unrar run:" > $OUTD/03-out-tree-before.txt
 echo "" >> $OUTD/03-out-tree-before.txt
 tree temp/test-data/out/ >> $OUTD/03-out-tree-before.txt
 
@@ -49,7 +49,7 @@ echo "# Input tree of 'src_dir' (temp/test-data/in/) after auto-unrar run:" > $O
 echo "" >> $OUTD/07-in-tree-after.txt
 tree temp/test-data/in/ >> $OUTD/07-in-tree-after.txt
 
-echo "# Input tree of 'src_dir' (temp/test-data/out/) after auto-unrar run:" > $OUTD/08-out-tree-after.txt
+echo "# Output tree of 'src_dir' (temp/test-data/out/) after auto-unrar run:" > $OUTD/08-out-tree-after.txt
 echo "" >> $OUTD/08-out-tree-after.txt
 tree temp/test-data/out/ >> $OUTD/08-out-tree-after.txt
 
@@ -60,3 +60,7 @@ cat temp/test-data/state.pl >> $OUTD/09-state-after.txt
 echo "# Rsync exclude file (temp/test-data/rsync-exclude-list.txt) after auto-unrar run:" > $OUTD/10-exclude-list-after.txt
 echo "" >> $OUTD/10-exclude-list-after.txt
 cat temp/test-data/rsync-exclude-list.txt >> $OUTD/10-exclude-list-after.txt
+
+# diffs
+diff --side-by-side $OUTD/02-in-tree-before.txt $OUTD/07-in-tree-after.txt > $OUTD/11-in-tree-diff.txt || true
+diff --side-by-side $OUTD/03-out-tree-before.txt $OUTD/08-out-tree-after.txt > $OUTD/12-out-tree-diff.txt || true
